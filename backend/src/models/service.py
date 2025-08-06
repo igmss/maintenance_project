@@ -96,7 +96,7 @@ class ProviderService(db.Model):
     __tablename__ = 'provider_services'
     
     id = db.Column(db.String(36), primary_key=True, default=generate_uuid)
-    provider_id = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=False)
+    provider_id = db.Column(db.String(36), db.ForeignKey('service_provider_profiles.id'), nullable=False)
     service_id = db.Column(db.String(36), db.ForeignKey('services.id'), nullable=False)
     custom_price = db.Column(db.Numeric(10, 2))  # Override base price if needed
     is_available = db.Column(db.Boolean, default=True)

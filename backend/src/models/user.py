@@ -22,7 +22,8 @@ class User(db.Model):
     
     # Relationships
     customer_profile = db.relationship('CustomerProfile', backref='user', uselist=False, cascade='all, delete-orphan')
-    provider_profile = db.relationship('ServiceProviderProfile', backref='user', uselist=False, cascade='all, delete-orphan')
+    provider_profile = db.relationship('ServiceProviderProfile', foreign_keys='ServiceProviderProfile.user_id', backref='user', uselist=False, cascade='all, delete-orphan')
+    verified_providers = db.relationship('ServiceProviderProfile', foreign_keys='ServiceProviderProfile.verified_by', backref='verifier', lazy='dynamic')
     
     def set_password(self, password):
         """Hash and set password"""
@@ -163,7 +164,7 @@ class CustomerAddress(db.Model):
     __tablename__ = 'customer_addresses'
     
     id = db.Column(db.String(36), primary_key=True, default=generate_uuid)
-    customer_id = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=False)
+    customer_id = db.Column(db.String(36), db.ForeignKey('customer_profiles.id'), nullable=False)
     address_type = db.Column(db.String(20), default='home')
     address_line1 = db.Column(db.String(255), nullable=False)
     address_line2 = db.Column(db.String(255))
