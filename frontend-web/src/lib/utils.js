@@ -48,8 +48,20 @@ export const formatPhoneNumber = (phone) => {
 
 // Validate Egyptian phone number
 export const isValidEgyptianPhone = (phone) => {
-  const pattern = /^(\+20|0020|20)?1[0-9]{9}$/;
-  return pattern.test(phone.replace(/\s|-/g, ''));
+  // Remove spaces, dashes, and other non-digit characters except +
+  const cleaned = phone.replace(/[\s\-\(\)]/g, '');
+  
+  // Egyptian mobile numbers patterns:
+  // 01xxxxxxxxx (11 digits starting with 01)
+  // +2001xxxxxxxx (with country code)
+  // 002001xxxxxxxx (with country code)
+  const patterns = [
+    /^01[0-9]{9}$/,           // 01xxxxxxxxx (11 digits)
+    /^\+2001[0-9]{9}$/,       // +2001xxxxxxxx
+    /^002001[0-9]{9}$/        // 002001xxxxxxxx
+  ];
+  
+  return patterns.some(pattern => pattern.test(cleaned));
 };
 
 // Validate email
