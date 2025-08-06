@@ -12,6 +12,7 @@ class User(db.Model):
     phone = db.Column(db.String(20), unique=True, index=True)
     password_hash = db.Column(db.String(255), nullable=False)
     user_type = db.Column(db.String(20), nullable=False)
+    status = db.Column(db.String(20), default='active')
     is_active = db.Column(db.Boolean, default=True)
     is_verified = db.Column(db.Boolean, default=False)
     email_verified_at = db.Column(db.DateTime)
@@ -39,6 +40,7 @@ class User(db.Model):
             'email': self.email,
             'phone': self.phone,
             'user_type': self.user_type,
+            'status': self.status,
             'is_active': self.is_active,
             'is_verified': self.is_verified,
             'created_at': self.created_at.isoformat() if self.created_at else None,
