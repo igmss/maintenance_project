@@ -42,7 +42,7 @@ def validate_email(email):
 def validate_phone(phone):
     """Validate Egyptian phone number format"""
     # Egyptian phone numbers: +20 followed by 10 digits or 01 followed by 9 digits
-    pattern = r'^(\+20|0020|20)?1[0-9]{9}$'
+    pattern = r'^(\+20|0020|20|01)?1[0-9]{9}$'
     return re.match(pattern, phone.replace(' ', '').replace('-', '')) is not None
 
 def normalize_phone(phone):
