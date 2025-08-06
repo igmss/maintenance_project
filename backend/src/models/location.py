@@ -6,14 +6,14 @@ class ProviderLocation(db.Model):
     __tablename__ = 'provider_locations'
     
     id = db.Column(db.String(36), primary_key=True, default=generate_uuid)
-    provider_id = db.Column(db.String(36), db.ForeignKey('service_provider_profiles.id'), nullable=False)
+    provider_id = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=False)
     latitude = db.Column(db.Numeric(10, 8), nullable=False)
     longitude = db.Column(db.Numeric(11, 8), nullable=False)
     accuracy = db.Column(db.Numeric(6, 2))  # GPS accuracy in meters
     heading = db.Column(db.Numeric(5, 2))  # Direction in degrees
     speed = db.Column(db.Numeric(5, 2))  # Speed in km/h
     is_online = db.Column(db.Boolean, default=True)
-    last_updated = db.Column(db.DateTime, default=datetime.utcnow)
+    battery_level = db.Column(db.Integer)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     def to_dict(self):
@@ -26,7 +26,7 @@ class ProviderLocation(db.Model):
             'heading': float(self.heading) if self.heading else None,
             'speed': float(self.speed) if self.speed else None,
             'is_online': self.is_online,
-            'last_updated': self.last_updated.isoformat() if self.last_updated else None,
+            'battery_level': self.battery_level,
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
 

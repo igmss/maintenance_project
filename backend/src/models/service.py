@@ -11,9 +11,12 @@ class ServiceCategory(db.Model):
     description_ar = db.Column(db.Text)
     description_en = db.Column(db.Text)
     icon_url = db.Column(db.Text)
+    color_code = db.Column(db.String(7), default='#007bff')
     is_active = db.Column(db.Boolean, default=True)
+    is_emergency_available = db.Column(db.Boolean, default=False)
     sort_order = db.Column(db.Integer, default=0)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationships
     services = db.relationship('Service', backref='category', lazy='dynamic')
@@ -31,9 +34,13 @@ class ServiceCategory(db.Model):
             'description_ar': self.description_ar,
             'description_en': self.description_en,
             'icon_url': self.icon_url,
+            'color_code': self.color_code,
             'is_active': self.is_active,
+            'is_emergency_available': self.is_emergency_available,
             'sort_order': self.sort_order,
-            'service_count': self.services.filter_by(is_active=True).count()
+            'service_count': self.services.filter_by(is_active=True).count(),
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }
 
 class Service(db.Model):
@@ -42,17 +49,19 @@ class Service(db.Model):
     
     id = db.Column(db.String(36), primary_key=True, default=generate_uuid)
     category_id = db.Column(db.String(36), db.ForeignKey('service_categories.id'), nullable=False)
-    name_ar = db.Column(db.String(100), nullable=False)
-    name_en = db.Column(db.String(100), nullable=False)
+    name_ar = db.Column(db.String(200), nullable=False)
+    name_en = db.Column(db.String(200), nullable=False)
     description_ar = db.Column(db.Text)
     description_en = db.Column(db.Text)
-    base_price = db.Column(db.Numeric(8, 2), nullable=False)
-    price_unit = db.Column(db.Enum('fixed', 'hourly', 'per_item', name='price_units'), default='fixed')
+    base_price = db.Column(db.Numeric(10, 2), nullable=False)
+    price_unit = db.Column(db.String(20), default='fixed')
     estimated_duration = db.Column(db.Integer)  # in minutes
+    is_active = db.Column(db.Boolean, default=True)
     is_emergency_service = db.Column(db.Boolean, default=False)
     emergency_surcharge_percentage = db.Column(db.Numeric(5, 2), default=0.00)
-    is_active = db.Column(db.Boolean, default=True)
+    requires_materials = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationships
     provider_services = db.relationship('ProviderService', backref='service', cascade='all, delete-orphan')
@@ -74,9 +83,12 @@ class Service(db.Model):
             'base_price': float(self.base_price),
             'price_unit': self.price_unit,
             'estimated_duration': self.estimated_duration,
+            'is_active': self.is_active,
             'is_emergency_service': self.is_emergency_service,
             'emergency_surcharge_percentage': float(self.emergency_surcharge_percentage),
-            'is_active': self.is_active
+            'requires_materials': self.requires_materials,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }
 
 class ProviderService(db.Model):
@@ -84,14 +96,13 @@ class ProviderService(db.Model):
     __tablename__ = 'provider_services'
     
     id = db.Column(db.String(36), primary_key=True, default=generate_uuid)
-    provider_id = db.Column(db.String(36), db.ForeignKey('service_provider_profiles.id'), nullable=False)
+    provider_id = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=False)
     service_id = db.Column(db.String(36), db.ForeignKey('services.id'), nullable=False)
-    custom_price = db.Column(db.Numeric(8, 2))  # Override base price if needed
+    custom_price = db.Column(db.Numeric(10, 2))  # Override base price if needed
+    is_available = db.Column(db.Boolean, default=True)
     experience_years = db.Column(db.Integer, default=0)
-    certification_url = db.Column(db.Text)
-    is_certified = db.Column(db.Boolean, default=False)
-    is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Unique constraint
     __table_args__ = (db.UniqueConstraint('provider_id', 'service_id', name='unique_provider_service'),)
@@ -102,10 +113,10 @@ class ProviderService(db.Model):
             'provider_id': self.provider_id,
             'service_id': self.service_id,
             'custom_price': float(self.custom_price) if self.custom_price else None,
+            'is_available': self.is_available,
             'experience_years': self.experience_years,
-            'certification_url': self.certification_url,
-            'is_certified': self.is_certified,
-            'is_active': self.is_active,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
             'service': self.service.to_dict() if self.service else None
         }
 
