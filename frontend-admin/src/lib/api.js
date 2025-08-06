@@ -51,13 +51,13 @@ class ApiClient {
 
   // Authentication
   async login(credentials) {
-    const response = await this.request('/admin/login', {
+    const response = await this.request('/auth/login', {
       method: 'POST',
       body: JSON.stringify(credentials),
     });
     
-    if (response.token) {
-      this.setToken(response.token);
+    if (response.access_token) {
+      this.setToken(response.access_token);
     }
     
     return response;

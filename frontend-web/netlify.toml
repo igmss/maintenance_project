@@ -8,7 +8,7 @@
 
 [[redirects]]
   from = "/api/*"
-  to = "https://maintenance-platform-api.onrender.com/api/:splat"
+  to = "https://maintenance-platform-backend.onrender.com/api/:splat"
   status = 200
   force = true
 
@@ -18,7 +18,7 @@
   status = 200
 
 [context.production.environment]
-  VITE_API_BASE_URL = "https://maintenance-platform-api.onrender.com"
+  VITE_API_BASE_URL = "https://maintenance-platform-backend.onrender.com"
   VITE_SUPABASE_URL = "https://your-project.supabase.co"
   VITE_SUPABASE_ANON_KEY = "your-supabase-anon-key"
   VITE_GOOGLE_MAPS_API_KEY = "your-google-maps-api-key"
@@ -26,10 +26,10 @@
   VITE_FAWRY_MERCHANT_CODE = "your-fawry-merchant-code"
 
 [context.deploy-preview.environment]
-  VITE_API_BASE_URL = "https://maintenance-platform-api-staging.onrender.com"
+  VITE_API_BASE_URL = "https://maintenance-platform-backend.onrender.com"
 
 [context.branch-deploy.environment]
-  VITE_API_BASE_URL = "https://maintenance-platform-api-dev.onrender.com"
+  VITE_API_BASE_URL = "https://maintenance-platform-backend.onrender.com"
 
 [[headers]]
   for = "/*"
@@ -38,7 +38,7 @@
     X-Content-Type-Options = "nosniff"
     X-XSS-Protection = "1; mode=block"
     Referrer-Policy = "strict-origin-when-cross-origin"
-    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://maps.googleapis.com https://js.stripe.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://maintenance-platform-api.onrender.com https://your-project.supabase.co https://api.stripe.com; frame-src https://js.stripe.com;"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://maps.googleapis.com https://js.stripe.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://maintenance-platform-backend.onrender.com https://your-project.supabase.co https://api.stripe.com; frame-src https://js.stripe.com;"
 
 [[headers]]
   for = "/assets/*"

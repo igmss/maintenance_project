@@ -27,12 +27,12 @@ class SupabaseConfig {
 class ApiConfig {
   static const String baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://localhost:5000/api',
+    defaultValue: 'https://maintenance-platform-backend.onrender.com/api',
   ); // Development
   
   static const String prodBaseUrl = String.fromEnvironment(
     'API_PROD_BASE_URL',
-    defaultValue: 'https://maintenance-platform-api.onrender.com/api',
+    defaultValue: 'https://maintenance-platform-backend.onrender.com/api',
   ); // Production
   
   // Use production URL in release mode

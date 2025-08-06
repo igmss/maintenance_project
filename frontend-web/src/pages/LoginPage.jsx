@@ -50,7 +50,13 @@ const LoginPage = () => {
         throw new Error('يرجى إدخال رقم هاتف مصري صحيح');
       }
 
-      const response = await login(formData);
+      // Send correct parameters to backend
+      const loginData = {
+        email_or_phone: formData.email_or_phone,  // Backend expects this exact parameter name
+        password: formData.password
+      };
+
+      const response = await login(loginData);
       
       // Redirect based on user type
       const redirectPath = {

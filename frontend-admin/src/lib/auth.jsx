@@ -12,22 +12,22 @@ class AuthService {
 
   async login(credentials) {
     try {
-      // Mock login for demo
-      const mockUser = {
-        id: 1,
-        name: 'Admin User',
-        email: credentials.email,
-        role: 'admin',
-        permissions: ['admin']
-      };
+      // Real backend authentication for admin
+      const response = await apiClient.login({
+        email_or_phone: credentials.email,  // Send correct parameter name
+        password: credentials.password
+      });
       
-      const mockToken = 'mock-admin-token';
-      
-      this.setAuth(mockToken, mockUser);
-      return { success: true, user: mockUser };
+      // Check if user is admin
+      if (response.user && response.user.user_type === 'admin') {
+        this.setAuth(response.access_token, response.user);
+        return { success: true, user: response.user };
+      } else {
+        return { success: false, error: 'Access denied. Admin privileges required.' };
+      }
     } catch (error) {
       console.error('Login error:', error);
-      return { success: false, error: error.message };
+      return { success: false, error: error.message || 'Login failed' };
     }
   }
 
