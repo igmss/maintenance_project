@@ -185,6 +185,8 @@ def create_sample_data():
                 'description_ar': 'خدمات السباكة وإصلاح الأنابيب والحنفيات',
                 'description_en': 'Plumbing services and pipe repairs',
                 'icon_url': '/icons/plumbing.svg',
+                'color_code': '#2196F3',
+                'is_emergency_available': True,
                 'sort_order': 1
             },
             {
@@ -193,6 +195,8 @@ def create_sample_data():
                 'description_ar': 'خدمات الكهرباء والإصلاحات الكهربائية',
                 'description_en': 'Electrical services and repairs',
                 'icon_url': '/icons/electrical.svg',
+                'color_code': '#FF9800',
+                'is_emergency_available': True,
                 'sort_order': 2
             },
             {
@@ -201,6 +205,8 @@ def create_sample_data():
                 'description_ar': 'خدمات التنظيف المنزلي والمكتبي',
                 'description_en': 'Home and office cleaning services',
                 'icon_url': '/icons/cleaning.svg',
+                'color_code': '#4CAF50',
+                'is_emergency_available': False,
                 'sort_order': 3
             },
             {
@@ -209,6 +215,8 @@ def create_sample_data():
                 'description_ar': 'خدمات النجارة وإصلاح الأثاث',
                 'description_en': 'Carpentry and furniture repair services',
                 'icon_url': '/icons/carpentry.svg',
+                'color_code': '#795548',
+                'is_emergency_available': False,
                 'sort_order': 4
             },
             {
@@ -217,6 +225,8 @@ def create_sample_data():
                 'description_ar': 'صيانة وإصلاح أجهزة التكييف والتبريد',
                 'description_en': 'Air conditioning maintenance and repair',
                 'icon_url': '/icons/ac.svg',
+                'color_code': '#00BCD4',
+                'is_emergency_available': True,
                 'sort_order': 5
             },
             {
@@ -225,6 +235,8 @@ def create_sample_data():
                 'description_ar': 'خدمات الدهان والديكور',
                 'description_en': 'Painting and decoration services',
                 'icon_url': '/icons/painting.svg',
+                'color_code': '#E91E63',
+                'is_emergency_available': False,
                 'sort_order': 6
             }
         ]
