@@ -15,6 +15,7 @@ class ProviderLocation(db.Model):
     is_online = db.Column(db.Boolean, default=True)
     battery_level = db.Column(db.Integer)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    last_updated = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     def to_dict(self):
         return {
@@ -27,7 +28,8 @@ class ProviderLocation(db.Model):
             'speed': float(self.speed) if self.speed else None,
             'is_online': self.is_online,
             'battery_level': self.battery_level,
-            'created_at': self.created_at.isoformat() if self.created_at else None
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'last_updated': self.last_updated.isoformat() if self.last_updated else None
         }
 
 class ProviderServiceArea(db.Model):
