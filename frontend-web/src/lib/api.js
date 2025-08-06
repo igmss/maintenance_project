@@ -1,5 +1,5 @@
 // API client for maintenance platform backend
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://maintenance-platform-backend.onrender.com/api';
 
 class ApiClient {
   constructor() {
