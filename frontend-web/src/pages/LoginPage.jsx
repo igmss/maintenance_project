@@ -105,7 +105,7 @@ const LoginPage = () => {
                   id="email_or_phone"
                   name="email_or_phone"
                   type="text"
-                  placeholder="example@email.com أو 01123456789"
+                  placeholder="example@email.com أو 01012345678"
                   value={formData.email_or_phone}
                   onChange={handleChange}
                   required
