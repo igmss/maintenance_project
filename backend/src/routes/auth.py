@@ -85,7 +85,8 @@ def register():
                 last_name=data['last_name'],
                 national_id=data['national_id'],
                 date_of_birth=dob,
-                preferred_language=data.get('preferred_language', 'ar')
+                preferred_language=data.get('preferred_language', 'ar'),
+                business_name=data.get('business_name', f"{data['first_name']} {data['last_name']}")  # Default business name
             )
         
         db.session.add(profile)

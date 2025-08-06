@@ -90,9 +90,12 @@ class ServiceProviderProfile(db.Model):
     
     id = db.Column(db.String(36), primary_key=True, default=generate_uuid)
     user_id = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=False)
-    business_name = db.Column(db.String(200), nullable=False)
+    business_name = db.Column(db.String(200))  # Made nullable for registration
     first_name = db.Column(db.String(100), nullable=False)
     last_name = db.Column(db.String(100), nullable=False)
+    national_id = db.Column(db.String(14))  # Added missing field
+    date_of_birth = db.Column(db.Date)  # Added missing field
+    preferred_language = db.Column(db.String(5), default='ar')  # Added missing field
     business_license = db.Column(db.String(100))
     tax_id = db.Column(db.String(50))
     profile_image_url = db.Column(db.Text)
@@ -134,6 +137,9 @@ class ServiceProviderProfile(db.Model):
             'first_name': self.first_name,
             'last_name': self.last_name,
             'full_name': f"{self.first_name} {self.last_name}",
+            'national_id': self.national_id,
+            'date_of_birth': self.date_of_birth.isoformat() if self.date_of_birth else None,
+            'preferred_language': self.preferred_language,
             'business_license': self.business_license,
             'tax_id': self.tax_id,
             'profile_image_url': self.profile_image_url,
