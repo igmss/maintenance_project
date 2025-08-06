@@ -51,14 +51,14 @@ export const isValidEgyptianPhone = (phone) => {
   // Remove spaces, dashes, and other non-digit characters except +
   const cleaned = phone.replace(/[\s\-\(\)]/g, '');
   
-  // Egyptian mobile numbers patterns:
-  // 01xxxxxxxxx (11 digits starting with 01)
-  // +2001xxxxxxxx (with country code)
-  // 002001xxxxxxxx (with country code)
+  // Egyptian mobile numbers patterns (must start with 1 after area code):
+  // 011xxxxxxxx, 010xxxxxxxx, 012xxxxxxxx, 015xxxxxxxx
+  // +20 1xxxxxxxx (with country code)
+  // 0020 1xxxxxxxx (with country code)
   const patterns = [
-    /^01[0-9]{9}$/,           // 01xxxxxxxxx (11 digits)
-    /^\+2001[0-9]{9}$/,       // +2001xxxxxxxx
-    /^002001[0-9]{9}$/        // 002001xxxxxxxx
+    /^01[0125][0-9]{8}$/,     // 010xxxxxxxx, 011xxxxxxxx, 012xxxxxxxx, 015xxxxxxxx
+    /^\+2001[0125][0-9]{8}$/, // +20 + 01[0125]xxxxxxxx
+    /^002001[0125][0-9]{8}$/  // 0020 + 01[0125]xxxxxxxx
   ];
   
   return patterns.some(pattern => pattern.test(cleaned));

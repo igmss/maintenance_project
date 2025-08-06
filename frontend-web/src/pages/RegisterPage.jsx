@@ -68,7 +68,7 @@ const RegisterPage = () => {
 
     // Phone validation
     if (!isValidEgyptianPhone(formData.phone)) {
-      throw new Error('يرجى إدخال رقم هاتف مصري صحيح (مثال: 01012345678)');
+      throw new Error('يرجى إدخال رقم هاتف مصري صحيح (مثال: 01123456789)');
     }
 
     // Password validation
@@ -264,7 +264,7 @@ const RegisterPage = () => {
                     id="phone"
                     name="phone"
                     type="tel"
-                    placeholder="01012345678"
+                    placeholder="01123456789"
                     value={formData.phone}
                     onChange={handleChange}
                     required
