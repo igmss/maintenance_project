@@ -1,0 +1,299 @@
+name: Frontend CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths: 
+      - 'maintenance-platform-web/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'maintenance-platform-web/**'
+
+env:
+  NODE_VERSION: '20'
+  PNPM_VERSION: '8.15.0'
+  
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v2
+      with:
+        version: ${{ env.PNPM_VERSION }}
+        
+    - name: Get pnpm store directory
+      shell: bash
+      run: |
+        echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+        
+    - name: Setup pnpm cache
+      uses: actions/cache@v3
+      with:
+        path: ${{ env.STORE_PATH }}
+        key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+        restore-keys: |
+          ${{ runner.os }}-pnpm-store-
+          
+    - name: Install dependencies
+      working-directory: ./maintenance-platform-web
+      run: pnpm install --frozen-lockfile
+      
+    - name: Run linting
+      working-directory: ./maintenance-platform-web
+      run: |
+        pnpm run lint
+        pnpm run type-check
+        
+    - name: Run tests
+      working-directory: ./maintenance-platform-web
+      run: |
+        pnpm run test:coverage
+        
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./maintenance-platform-web/coverage/coverage-final.json
+        flags: frontend
+        name: frontend-coverage
+        
+    - name: Build application
+      working-directory: ./maintenance-platform-web
+      env:
+        VITE_API_BASE_URL: https://maintenance-platform-api-staging.onrender.com
+      run: |
+        pnpm run build
+        
+    - name: Run Lighthouse CI
+      working-directory: ./maintenance-platform-web
+      run: |
+        npm install -g @lhci/cli@0.12.x
+        lhci autorun
+      env:
+        LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
+        
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: build-files
+        path: ./maintenance-platform-web/dist/
+
+  security-scan:
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v2
+      with:
+        version: ${{ env.PNPM_VERSION }}
+        
+    - name: Install dependencies
+      working-directory: ./maintenance-platform-web
+      run: pnpm install --frozen-lockfile
+      
+    - name: Run security audit
+      working-directory: ./maintenance-platform-web
+      run: |
+        pnpm audit --audit-level moderate
+        
+    - name: Run Snyk security scan
+      uses: snyk/actions/node@master
+      env:
+        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      with:
+        args: --file=./maintenance-platform-web/package.json --severity-threshold=high
+
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    needs: [test, security-scan]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v2
+      with:
+        version: ${{ env.PNPM_VERSION }}
+        
+    - name: Install dependencies
+      working-directory: ./maintenance-platform-web
+      run: pnpm install --frozen-lockfile
+      
+    - name: Build for production
+      working-directory: ./maintenance-platform-web
+      env:
+        VITE_API_BASE_URL: https://maintenance-platform-api.onrender.com
+        VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+        VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+        VITE_GOOGLE_MAPS_API_KEY: ${{ secrets.VITE_GOOGLE_MAPS_API_KEY }}
+        VITE_STRIPE_PUBLISHABLE_KEY: ${{ secrets.VITE_STRIPE_PUBLISHABLE_KEY }}
+      run: |
+        pnpm run build
+        
+    - name: Run bundle analyzer
+      working-directory: ./maintenance-platform-web
+      run: |
+        pnpm run analyze
+        
+    - name: Deploy to Netlify
+      uses: nwtgck/actions-netlify@v2.1
+      with:
+        publish-dir: './maintenance-platform-web/dist'
+        production-branch: main
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        deploy-message: "Deploy from GitHub Actions"
+        enable-pull-request-comment: false
+        enable-commit-comment: true
+        overwrites-pull-request-comment: true
+      env:
+        NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+        NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+        
+    - name: Wait for deployment
+      run: |
+        echo "Waiting for Netlify deployment to complete..."
+        sleep 60
+        
+    - name: Health check
+      run: |
+        curl -f https://maintenanceplatform.netlify.app/ || exit 1
+        echo "Frontend health check passed!"
+        
+    - name: Run post-deployment tests
+      run: |
+        # Test critical pages
+        curl -f https://maintenanceplatform.netlify.app/login || exit 1
+        curl -f https://maintenanceplatform.netlify.app/register || exit 1
+        echo "Post-deployment tests passed!"
+        
+    - name: Notify deployment success
+      if: success()
+      run: |
+        echo "✅ Frontend deployment successful!"
+        echo "🚀 Website is live at: https://maintenanceplatform.netlify.app"
+
+  staging-deploy:
+    runs-on: ubuntu-latest
+    needs: [test, security-scan]
+    if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v2
+      with:
+        version: ${{ env.PNPM_VERSION }}
+        
+    - name: Install dependencies
+      working-directory: ./maintenance-platform-web
+      run: pnpm install --frozen-lockfile
+      
+    - name: Build for staging
+      working-directory: ./maintenance-platform-web
+      env:
+        VITE_API_BASE_URL: https://maintenance-platform-api-staging.onrender.com
+        VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_STAGING_URL }}
+        VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_STAGING_ANON_KEY }}
+      run: |
+        pnpm run build
+        
+    - name: Deploy to Netlify Staging
+      uses: nwtgck/actions-netlify@v2.1
+      with:
+        publish-dir: './maintenance-platform-web/dist'
+        production-branch: main
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        deploy-message: "Staging deploy from GitHub Actions"
+        alias: staging
+      env:
+        NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+        NETLIFY_SITE_ID: ${{ secrets.NETLIFY_STAGING_SITE_ID }}
+        
+    - name: Health check staging
+      run: |
+        sleep 60
+        curl -f https://staging--maintenanceplatform.netlify.app/ || exit 1
+        echo "Staging health check passed!"
+
+  admin-deploy:
+    runs-on: ubuntu-latest
+    needs: [test, security-scan]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v2
+      with:
+        version: ${{ env.PNPM_VERSION }}
+        
+    - name: Install dependencies
+      working-directory: ./maintenance-platform-admin
+      run: pnpm install --frozen-lockfile
+      
+    - name: Build admin dashboard
+      working-directory: ./maintenance-platform-admin
+      env:
+        VITE_API_BASE_URL: https://maintenance-platform-api.onrender.com
+        VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+        VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+      run: |
+        pnpm run build
+        
+    - name: Deploy admin to Netlify
+      uses: nwtgck/actions-netlify@v2.1
+      with:
+        publish-dir: './maintenance-platform-admin/dist'
+        production-branch: main
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        deploy-message: "Admin deploy from GitHub Actions"
+      env:
+        NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+        NETLIFY_SITE_ID: ${{ secrets.NETLIFY_ADMIN_SITE_ID }}
+        
+    - name: Health check admin
+      run: |
+        sleep 60
+        curl -f https://admin.maintenanceplatform.netlify.app/ || exit 1
+        echo "Admin dashboard health check passed!"
+

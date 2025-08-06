@@ -1,0 +1,70 @@
+services:
+  - type: web
+    name: maintenance-platform-api
+    env: python
+    region: oregon
+    plan: starter
+    buildCommand: |
+      pip install --upgrade pip
+      pip install -r requirements.txt
+    startCommand: |
+      gunicorn --bind 0.0.0.0:$PORT src.main:app
+    envVars:
+      - key: FLASK_ENV
+        value: production
+      - key: FLASK_APP
+        value: src.main:app
+      - key: DATABASE_URL
+        sync: false  # Set this in Render dashboard
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: SECRET_KEY
+        generateValue: true
+      - key: SUPABASE_URL
+        sync: false  # Set this in Render dashboard
+      - key: SUPABASE_ANON_KEY
+        sync: false  # Set this in Render dashboard
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false  # Set this in Render dashboard
+      - key: CORS_ORIGINS
+        value: https://maintenanceplatform.netlify.app,https://admin.maintenanceplatform.netlify.app
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: maintenance-platform-redis
+          property: connectionString
+      # Payment Gateway Keys (set in dashboard)
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: FAWRY_MERCHANT_CODE
+        sync: false
+      - key: FAWRY_SECRET_KEY
+        sync: false
+      # Email Configuration (set in dashboard)
+      - key: SMTP_SERVER
+        sync: false
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_USERNAME
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      # SMS Configuration (set in dashboard)
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_PHONE_NUMBER
+        sync: false
+      # Google Maps API (set in dashboard)
+      - key: GOOGLE_MAPS_API_KEY
+        sync: false
+    healthCheckPath: /api/health
+    autoDeploy: true
+    
+  - name: maintenance-platform-redis
+    type: redis
+    region: oregon
+    plan: starter
+    maxmemoryPolicy: allkeys-lru
+
