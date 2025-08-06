@@ -33,6 +33,7 @@ import {
   XCircle,
   Eye,
   MoreHorizontal,
+  BarChart3,
 } from 'lucide-react';
 
 // Mock data - replace with real API calls
