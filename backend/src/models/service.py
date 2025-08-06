@@ -100,6 +100,7 @@ class ProviderService(db.Model):
     service_id = db.Column(db.String(36), db.ForeignKey('services.id'), nullable=False)
     custom_price = db.Column(db.Numeric(10, 2))  # Override base price if needed
     is_available = db.Column(db.Boolean, default=True)
+    is_active = db.Column(db.Boolean, default=True)
     experience_years = db.Column(db.Integer, default=0)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -114,6 +115,7 @@ class ProviderService(db.Model):
             'service_id': self.service_id,
             'custom_price': float(self.custom_price) if self.custom_price else None,
             'is_available': self.is_available,
+            'is_active': self.is_active,
             'experience_years': self.experience_years,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
