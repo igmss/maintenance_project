@@ -66,22 +66,36 @@ const BookingPage = () => {
 
   const loadServiceData = async () => {
     try {
-      // For now, we'll simulate loading service data
-      // In a real app, you'd fetch the specific service by ID
-      const categoriesResponse = await apiClient.getServiceCategories('ar');
-      const category = categoriesResponse.categories?.find(c => c.id === serviceId);
+      // First, check if serviceId is a service or category
+      // Try to get it as a service first
+      try {
+        const serviceResponse = await apiClient.request(`/services/${serviceId}`);
+        setService(serviceResponse);
+        await searchProviders();
+        return;
+      } catch (serviceError) {
+        // If not found as service, try as category and get first service
+        console.log('Not a service ID, trying as category...');
+      }
       
-      if (category) {
+      // Get services within the category
+      const categoryServicesResponse = await apiClient.getCategoryServices(serviceId, 'ar');
+      
+      if (categoryServicesResponse.services && categoryServicesResponse.services.length > 0) {
+        // Use the first service in the category as default
+        const firstService = categoryServicesResponse.services[0];
         setService({
-          id: serviceId,
-          name: category.name,
-          description: category.description,
-          base_price: 150, // Simulated price
-          category: category
+          id: firstService.id,
+          name: firstService.name,
+          description: firstService.description,
+          base_price: firstService.base_price,
+          category: categoryServicesResponse.category
         });
         
-        // Search for providers
-        await searchProviders();
+        // Search for providers with the actual service ID
+        await searchProviders(firstService.id);
+      } else {
+        setError('لا توجد خدمات متاحة في هذه الفئة');
       }
     } catch (error) {
       console.error('Failed to load service data:', error);
@@ -100,13 +114,13 @@ const BookingPage = () => {
     }
   };
 
-  const searchProviders = async () => {
+  const searchProviders = async (actualServiceId = null) => {
     try {
       const searchData = {
-        service_category_id: serviceId,
+        service_id: actualServiceId || service?.id || serviceId,  // Use actual service ID
         latitude: userLocation?.latitude || 30.0444, // Default to Cairo
         longitude: userLocation?.longitude || 31.2357,
-        radius_km: 25
+        max_distance_km: 25  // Fixed: use max_distance_km as backend expects
       };
       
       const response = await apiClient.searchProviders(searchData);
