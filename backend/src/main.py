@@ -37,10 +37,23 @@ def create_app():
     
     # Database configuration
     database_url = os.getenv('DATABASE_URL')
-    if database_url:
-        app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+    if not database_url:
+        # Fallback: construct from individual components
+        db_host = os.getenv('DB_HOST', 'aws-0-us-east-1.pooler.supabase.com')
+        db_port = os.getenv('DB_PORT', '6543')
+        db_user = os.getenv('DB_USER', 'postgres.mxfduvxgvobbnazeovfd')
+        db_password = os.getenv('DB_PASSWORD', 'Aa123e456y@$$')
+        db_name = os.getenv('DB_NAME', 'postgres')
+        
+        if all([db_host, db_port, db_user, db_password, db_name]):
+            database_url = f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
+            print(f"✅ Using constructed DATABASE_URL: postgresql://{db_user}:***@{db_host}:{db_port}/{db_name}")
+        else:
+            raise ValueError("❌ DATABASE_URL not provided and unable to construct from environment variables")
     else:
-        app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{os.path.join(os.path.dirname(__file__), 'database', 'app.db')}"
+        print(f"✅ Using provided DATABASE_URL: {database_url[:50]}...")
+    
+    app.config['SQLALCHEMY_DATABASE_URI'] = database_url
     
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {

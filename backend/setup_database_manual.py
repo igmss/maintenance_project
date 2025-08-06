@@ -14,12 +14,12 @@ load_dotenv('.env')
 def setup_database():
     print('🚀 Setting up Maintenance Platform database...')
     
-    # Connection parameters
-    host = "aws-0-us-east-1.pooler.supabase.com"
-    port = 6543
-    user = "postgres.mxfduvxgvobbnazeovfd"
-    password = "Aa123e456y@$$"
-    database = "postgres"
+    # Connection parameters from environment
+    host = os.getenv('DB_HOST', 'aws-0-us-east-1.pooler.supabase.com')
+    port = int(os.getenv('DB_PORT', '6543'))
+    user = os.getenv('DB_USER', 'postgres.mxfduvxgvobbnazeovfd')
+    password = os.getenv('DB_PASSWORD', 'Aa123e456y@$$')
+    database = os.getenv('DB_NAME', 'postgres')
     
     print(f'📊 Connecting to: {host}:{port}')
     print(f'👤 User: {user}')
