@@ -11,6 +11,11 @@ import ProviderDashboard from './pages/ProviderDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import BookingPage from './pages/BookingPage';
 import ProfilePage from './pages/ProfilePage';
+import ServicesPage from './pages/ServicesPage';
+import BookingsPage from './pages/BookingsPage';
+import AddServicePage from './pages/AddServicePage';
+import ServiceAreasPage from './pages/ServiceAreasPage';
+import VerificationPage from './pages/VerificationPage';
 
 import './App.css';
 
@@ -130,6 +135,50 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <ProfilePage />
+          </ProtectedRoute>
+        } 
+      />
+
+      {/* Customer Routes */}
+      <Route 
+        path="/services" 
+        element={
+          <ProtectedRoute requiredUserType="customer">
+            <ServicesPage />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/bookings" 
+        element={
+          <ProtectedRoute>
+            <BookingsPage />
+          </ProtectedRoute>
+        } 
+      />
+
+      {/* Provider Routes */}
+      <Route 
+        path="/services/add" 
+        element={
+          <ProtectedRoute requiredUserType="service_provider">
+            <AddServicePage />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/service-areas" 
+        element={
+          <ProtectedRoute requiredUserType="service_provider">
+            <ServiceAreasPage />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/verification" 
+        element={
+          <ProtectedRoute requiredUserType="service_provider">
+            <VerificationPage />
           </ProtectedRoute>
         } 
       />
