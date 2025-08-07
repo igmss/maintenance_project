@@ -38,64 +38,68 @@ import {
   BarChart3,
 } from 'lucide-react';
 
-// Mock data for analytics
-const mockRevenueData = [
-  { month: 'Jan', revenue: 45000, bookings: 320, customers: 180 },
-  { month: 'Feb', revenue: 52000, bookings: 380, customers: 210 },
-  { month: 'Mar', revenue: 48000, bookings: 350, customers: 195 },
-  { month: 'Apr', revenue: 61000, bookings: 420, customers: 240 },
-  { month: 'May', revenue: 58000, bookings: 390, customers: 225 },
-  { month: 'Jun', revenue: 67000, bookings: 450, customers: 260 },
-  { month: 'Jul', revenue: 72000, bookings: 480, customers: 280 },
-  { month: 'Aug', revenue: 69000, bookings: 460, customers: 270 },
-];
-
-const mockServiceData = [
-  { name: 'Plumbing', bookings: 1250, revenue: 125000, color: '#3b82f6' },
-  { name: 'Electrical', bookings: 980, revenue: 117600, color: '#f59e0b' },
-  { name: 'AC Repair', bookings: 750, revenue: 112500, color: '#10b981' },
-  { name: 'Cleaning', bookings: 650, revenue: 52000, color: '#8b5cf6' },
-  { name: 'Carpentry', bookings: 320, revenue: 28800, color: '#ef4444' },
-];
-
-const mockProviderPerformance = [
-  { name: 'Mohamed Ali', rating: 4.9, bookings: 156, revenue: 23400 },
-  { name: 'Ahmed Hassan', rating: 4.8, bookings: 142, revenue: 21300 },
-  { name: 'Khaled Omar', rating: 4.7, bookings: 128, revenue: 19200 },
-  { name: 'Ali Hassan', rating: 4.6, bookings: 115, revenue: 17250 },
-  { name: 'Omar Youssef', rating: 4.5, bookings: 98, revenue: 14700 },
-];
-
-const mockHourlyData = [
-  { hour: '6 AM', bookings: 5 },
-  { hour: '7 AM', bookings: 12 },
-  { hour: '8 AM', bookings: 25 },
-  { hour: '9 AM', bookings: 45 },
-  { hour: '10 AM', bookings: 38 },
-  { hour: '11 AM', bookings: 42 },
-  { hour: '12 PM', bookings: 35 },
-  { hour: '1 PM', bookings: 40 },
-  { hour: '2 PM', bookings: 48 },
-  { hour: '3 PM', bookings: 52 },
-  { hour: '4 PM', bookings: 46 },
-  { hour: '5 PM', bookings: 38 },
-  { hour: '6 PM', bookings: 32 },
-  { hour: '7 PM', bookings: 28 },
-  { hour: '8 PM', bookings: 18 },
-  { hour: '9 PM', bookings: 12 },
-];
-
-const mockLocationData = [
-  { governorate: 'Cairo', bookings: 2450, revenue: 294000 },
-  { governorate: 'Giza', bookings: 1680, revenue: 201600 },
-  { governorate: 'Alexandria', bookings: 1320, revenue: 158400 },
-  { governorate: 'Qalyubia', bookings: 890, revenue: 106800 },
-  { governorate: 'Sharqia', bookings: 650, revenue: 78000 },
-];
+import { apiClient } from '../lib/api';
+import { useEffect } from 'react';
 
 const Analytics = () => {
   const [timeRange, setTimeRange] = useState('7d');
   const [selectedMetric, setSelectedMetric] = useState('revenue');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [analyticsData, setAnalyticsData] = useState({
+    stats: {
+      totalRevenue: 0,
+      totalBookings: 0,
+      activeUsers: 0,
+      avgRating: 0
+    },
+    charts: {
+      revenue: [],
+      services: [],
+      providers: [],
+      hourly: [],
+      locations: []
+    }
+  });
+
+  // Load analytics data
+  useEffect(() => {
+    loadAnalyticsData();
+  }, [timeRange]);
+
+  const loadAnalyticsData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // For now, we don't have real analytics endpoints yet
+      // In production, this would call multiple API endpoints:
+      // - await apiClient.getAnalyticsStats(timeRange);
+      // - await apiClient.getRevenueData(timeRange);
+      // - await apiClient.getServiceAnalytics(timeRange);
+      setAnalyticsData({
+        stats: {
+          totalRevenue: 0,
+          totalBookings: 0,
+          activeUsers: 0,
+          avgRating: 0
+        },
+        charts: {
+          revenue: [],
+          services: [],
+          providers: [],
+          hourly: [],
+          locations: []
+        }
+      });
+      
+    } catch (error) {
+      console.error('Failed to load analytics:', error);
+      setError('Failed to load analytics data');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const StatCard = ({ title, value, change, icon: Icon, trend, format = 'number' }) => {
     const formatValue = (val) => {
@@ -113,15 +117,14 @@ const Analytics = () => {
         <CardContent>
           <div className="text-2xl font-bold">{formatValue(value)}</div>
           <div className="flex items-center text-xs text-muted-foreground">
-            {trend === 'up' ? (
-              <TrendingUp className="mr-1 h-3 w-3 text-green-500" />
-            ) : (
-              <TrendingDown className="mr-1 h-3 w-3 text-red-500" />
-            )}
-            <span className={trend === 'up' ? 'text-green-500' : 'text-red-500'}>
-              {change}%
+            {trend === 'up' && <TrendingUp className="mr-1 h-3 w-3 text-green-500" />}
+            {trend === 'down' && <TrendingDown className="mr-1 h-3 w-3 text-red-500" />}
+            <span>
+              {typeof change === 'number' 
+                ? `${change >= 0 ? '+' : ''}${change}% from last period`
+                : change || 'No data available'
+              }
             </span>
-            <span className="ml-1">from last period</span>
           </div>
         </CardContent>
       </Card>
@@ -161,32 +164,32 @@ const Analytics = () => {
       <div className="grid gap-4 md:grid-cols-4">
         <StatCard
           title="Total Revenue"
-          value={435600}
-          change={18.7}
+          value={analyticsData.stats.totalRevenue}
+          change="No historical data"
           icon={DollarSign}
-          trend="up"
+          trend="neutral"
           format="currency"
         />
         <StatCard
           title="Total Bookings"
-          value={3950}
-          change={15.2}
+          value={analyticsData.stats.totalBookings}
+          change="No historical data"
           icon={Calendar}
-          trend="up"
+          trend="neutral"
         />
         <StatCard
           title="Active Users"
-          value={18267}
-          change={12.5}
+          value={analyticsData.stats.activeUsers}
+          change="No historical data"
           icon={Users}
-          trend="up"
+          trend="neutral"
         />
         <StatCard
           title="Avg. Rating"
-          value={4.7}
-          change={2.1}
+          value={analyticsData.stats.avgRating}
+          change="No historical data"
           icon={Star}
-          trend="up"
+          trend="neutral"
         />
       </div>
 
@@ -201,56 +204,61 @@ const Analytics = () => {
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
-          <div className="grid gap-6 md:grid-cols-2">
-            {/* Revenue Trend */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Revenue Trend</CardTitle>
-                <CardDescription>Monthly revenue over time</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <AreaChart data={mockRevenueData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
-                    <YAxis />
-                    <Tooltip formatter={(value) => [`${value} EGP`, 'Revenue']} />
-                    <Area
-                      type="monotone"
-                      dataKey="revenue"
-                      stroke="#3b82f6"
-                      fill="#3b82f6"
-                      fillOpacity={0.3}
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
+          {loading ? (
+            <div className="grid gap-6 md:grid-cols-2">
+              <Card>
+                <CardContent className="p-6">
+                  <div className="text-center py-8">
+                    <p className="text-muted-foreground">Loading analytics...</p>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-6">
+                  <div className="text-center py-8">
+                    <p className="text-muted-foreground">Loading analytics...</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          ) : error ? (
+            <div className="text-center py-8">
+              <p className="text-red-600">{error}</p>
+              <Button onClick={loadAnalyticsData} className="mt-2">Try Again</Button>
+            </div>
+          ) : (
+            <div className="grid gap-6 md:grid-cols-2">
+              {/* Revenue Trend */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Revenue Trend</CardTitle>
+                  <CardDescription>Historical revenue data</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-center py-8">
+                    <BarChart3 className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                    <p className="text-muted-foreground">No revenue data available</p>
+                    <p className="text-sm text-muted-foreground">Data will appear here as your platform grows</p>
+                  </div>
+                </CardContent>
+              </Card>
 
-            {/* Bookings Trend */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Bookings Trend</CardTitle>
-                <CardDescription>Monthly bookings over time</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={mockRevenueData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
-                    <YAxis />
-                    <Tooltip />
-                    <Line
-                      type="monotone"
-                      dataKey="bookings"
-                      stroke="#10b981"
-                      strokeWidth={2}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          </div>
+              {/* Bookings Trend */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Bookings Trend</CardTitle>
+                  <CardDescription>Historical booking data</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-center py-8">
+                    <BarChart3 className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                    <p className="text-muted-foreground">No booking data available</p>
+                    <p className="text-sm text-muted-foreground">Data will appear here as bookings are made</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
 
           {/* Hourly Activity */}
           <Card>
@@ -259,15 +267,11 @@ const Analytics = () => {
               <CardDescription>Peak hours for service bookings</CardDescription>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={mockHourlyData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="hour" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="bookings" fill="#8b5cf6" />
-                </BarChart>
-              </ResponsiveContainer>
+              <div className="text-center py-8">
+                <BarChart3 className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                <p className="text-muted-foreground">No hourly data available</p>
+                <p className="text-sm text-muted-foreground">Analytics will appear here as bookings accumulate</p>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -281,25 +285,11 @@ const Analytics = () => {
                 <CardDescription>Bookings by service category</CardDescription>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={mockServiceData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={60}
-                      outerRadius={120}
-                      paddingAngle={5}
-                      dataKey="bookings"
-                    >
-                      {mockServiceData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
+                <div className="text-center py-8">
+                  <BarChart3 className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground">No service data available</p>
+                  <p className="text-sm text-muted-foreground">Service analytics will appear here</p>
+                </div>
               </CardContent>
             </Card>
 
@@ -310,15 +300,11 @@ const Analytics = () => {
                 <CardDescription>Revenue comparison across services</CardDescription>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={mockServiceData} layout="horizontal">
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis type="number" />
-                    <YAxis dataKey="name" type="category" width={80} />
-                    <Tooltip formatter={(value) => [`${value} EGP`, 'Revenue']} />
-                    <Bar dataKey="revenue" fill="#f59e0b" />
-                  </BarChart>
-                </ResponsiveContainer>
+                <div className="text-center py-8">
+                  <BarChart3 className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground">No revenue data available</p>
+                  <p className="text-sm text-muted-foreground">Service revenue data will appear here</p>
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -330,27 +316,10 @@ const Analytics = () => {
               <CardDescription>Detailed metrics for each service category</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {mockServiceData.map((service, index) => (
-                  <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="flex items-center space-x-4">
-                      <div
-                        className="w-4 h-4 rounded-full"
-                        style={{ backgroundColor: service.color }}
-                      ></div>
-                      <div>
-                        <h4 className="font-medium">{service.name}</h4>
-                        <p className="text-sm text-muted-foreground">
-                          {service.bookings} bookings
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-medium">{(service.revenue / 1000).toFixed(0)}K EGP</p>
-                      <p className="text-sm text-muted-foreground">Revenue</p>
-                    </div>
-                  </div>
-                ))}
+              <div className="text-center py-8">
+                <BarChart3 className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                <p className="text-muted-foreground">No service performance data available</p>
+                <p className="text-sm text-muted-foreground">Performance metrics will appear here as services are used</p>
               </div>
             </CardContent>
           </Card>
@@ -364,29 +333,10 @@ const Analytics = () => {
               <CardDescription>Providers ranked by performance metrics</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {mockProviderPerformance.map((provider, index) => (
-                  <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="flex items-center space-x-4">
-                      <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-primary-foreground font-medium">
-                        {index + 1}
-                      </div>
-                      <div>
-                        <h4 className="font-medium">{provider.name}</h4>
-                        <div className="flex items-center text-sm text-muted-foreground">
-                          <Star className="mr-1 h-3 w-3 text-yellow-500" />
-                          {provider.rating}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-medium">{provider.bookings} bookings</p>
-                      <p className="text-sm text-muted-foreground">
-                        {(provider.revenue / 1000).toFixed(0)}K EGP revenue
-                      </p>
-                    </div>
-                  </div>
-                ))}
+              <div className="text-center py-8">
+                <Users className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                <p className="text-muted-foreground">No provider performance data available</p>
+                <p className="text-sm text-muted-foreground">Provider rankings will appear here as they complete more jobs</p>
               </div>
             </CardContent>
           </Card>
@@ -400,21 +350,11 @@ const Analytics = () => {
               <CardDescription>New customer acquisition over time</CardDescription>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <AreaChart data={mockRevenueData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <Tooltip />
-                  <Area
-                    type="monotone"
-                    dataKey="customers"
-                    stroke="#10b981"
-                    fill="#10b981"
-                    fillOpacity={0.3}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
+              <div className="text-center py-8">
+                <Users className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                <p className="text-muted-foreground">No customer growth data available</p>
+                <p className="text-sm text-muted-foreground">Customer analytics will appear here over time</p>
+              </div>
             </CardContent>
           </Card>
 
@@ -425,8 +365,8 @@ const Analytics = () => {
                 <CardTitle className="text-sm font-medium">Repeat Customers</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">68%</div>
-                <p className="text-xs text-muted-foreground">+5% from last month</p>
+                <div className="text-2xl font-bold">0%</div>
+                <p className="text-xs text-muted-foreground">No data yet</p>
               </CardContent>
             </Card>
             <Card>
@@ -434,8 +374,8 @@ const Analytics = () => {
                 <CardTitle className="text-sm font-medium">Avg. Bookings per Customer</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">3.2</div>
-                <p className="text-xs text-muted-foreground">+0.3 from last month</p>
+                <div className="text-2xl font-bold">0</div>
+                <p className="text-xs text-muted-foreground">No data yet</p>
               </CardContent>
             </Card>
             <Card>
@@ -443,8 +383,8 @@ const Analytics = () => {
                 <CardTitle className="text-sm font-medium">Customer Satisfaction</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">4.7/5</div>
-                <p className="text-xs text-muted-foreground">+0.1 from last month</p>
+                <div className="text-2xl font-bold">0/5</div>
+                <p className="text-xs text-muted-foreground">No data yet</p>
               </CardContent>
             </Card>
           </div>
@@ -458,15 +398,11 @@ const Analytics = () => {
               <CardDescription>Bookings and revenue by location</CardDescription>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={400}>
-                <BarChart data={mockLocationData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="governorate" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="bookings" fill="#3b82f6" name="Bookings" />
-                </BarChart>
-              </ResponsiveContainer>
+              <div className="text-center py-8">
+                <BarChart3 className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                <p className="text-muted-foreground">No location data available</p>
+                <p className="text-sm text-muted-foreground">Location performance will appear here as bookings are made</p>
+              </div>
             </CardContent>
           </Card>
 
@@ -477,21 +413,10 @@ const Analytics = () => {
               <CardDescription>Detailed breakdown by governorate</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {mockLocationData.map((location, index) => (
-                  <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div>
-                      <h4 className="font-medium">{location.governorate}</h4>
-                      <p className="text-sm text-muted-foreground">
-                        {location.bookings} bookings
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-medium">{(location.revenue / 1000).toFixed(0)}K EGP</p>
-                      <p className="text-sm text-muted-foreground">Revenue</p>
-                    </div>
-                  </div>
-                ))}
+              <div className="text-center py-8">
+                <BarChart3 className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                <p className="text-muted-foreground">No location details available</p>
+                <p className="text-sm text-muted-foreground">Geographic analytics will appear here over time</p>
               </div>
             </CardContent>
           </Card>

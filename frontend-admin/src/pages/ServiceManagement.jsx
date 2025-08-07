@@ -52,101 +52,17 @@ import {
   DollarSign,
 } from 'lucide-react';
 
-// Mock service data
-const mockServices = [
-  {
-    id: 1,
-    name: 'Plumbing',
-    nameAr: 'السباكة',
-    description: 'Professional plumbing services including repairs, installations, and maintenance',
-    descriptionAr: 'خدمات السباكة المهنية تشمل الإصلاحات والتركيبات والصيانة',
-    icon: 'plumbing',
-    isActive: true,
-    basePrice: 100,
-    emergencyPrice: 150,
-    averageRating: 4.7,
-    totalProviders: 45,
-    totalBookings: 1250,
-    monthlyRevenue: 125000,
-    category: 'maintenance',
-    createdAt: '2024-01-15',
-  },
-  {
-    id: 2,
-    name: 'Electrical',
-    nameAr: 'الكهرباء',
-    description: 'Electrical services including wiring, repairs, and installations',
-    descriptionAr: 'الخدمات الكهربائية تشمل الأسلاك والإصلاحات والتركيبات',
-    icon: 'electrical',
-    isActive: true,
-    basePrice: 120,
-    emergencyPrice: 180,
-    averageRating: 4.8,
-    totalProviders: 38,
-    totalBookings: 980,
-    monthlyRevenue: 117600,
-    category: 'maintenance',
-    createdAt: '2024-01-15',
-  },
-  {
-    id: 3,
-    name: 'Air Conditioning',
-    nameAr: 'التكييف',
-    description: 'AC repair, maintenance, and installation services',
-    descriptionAr: 'خدمات إصلاح وصيانة وتركيب التكييف',
-    icon: 'ac',
-    isActive: true,
-    basePrice: 150,
-    emergencyPrice: 200,
-    averageRating: 4.6,
-    totalProviders: 32,
-    totalBookings: 750,
-    monthlyRevenue: 112500,
-    category: 'maintenance',
-    createdAt: '2024-01-20',
-  },
-  {
-    id: 4,
-    name: 'Cleaning',
-    nameAr: 'التنظيف',
-    description: 'Professional cleaning services for homes and offices',
-    descriptionAr: 'خدمات التنظيف المهنية للمنازل والمكاتب',
-    icon: 'cleaning',
-    isActive: true,
-    basePrice: 80,
-    emergencyPrice: 100,
-    averageRating: 4.5,
-    totalProviders: 28,
-    totalBookings: 650,
-    monthlyRevenue: 52000,
-    category: 'cleaning',
-    createdAt: '2024-02-01',
-  },
-  {
-    id: 5,
-    name: 'Carpentry',
-    nameAr: 'النجارة',
-    description: 'Wood work, furniture repair, and custom carpentry',
-    descriptionAr: 'أعمال الخشب وإصلاح الأثاث والنجارة المخصصة',
-    icon: 'carpentry',
-    isActive: false,
-    basePrice: 90,
-    emergencyPrice: 130,
-    averageRating: 4.4,
-    totalProviders: 15,
-    totalBookings: 320,
-    monthlyRevenue: 28800,
-    category: 'maintenance',
-    createdAt: '2024-02-15',
-  },
-];
+import { apiClient } from '../lib/api';
+import { useEffect } from 'react';
 
 const ServiceManagement = () => {
-  const [services, setServices] = useState(mockServices);
+  const [services, setServices] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [selectedService, setSelectedService] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [newService, setNewService] = useState({
     name: '',
     nameAr: '',
@@ -158,10 +74,33 @@ const ServiceManagement = () => {
     isActive: true,
   });
 
+  // Load services data
+  useEffect(() => {
+    loadServices();
+  }, []);
+
+  const loadServices = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // For now, we don't have a real services endpoint yet
+      // In production, this would call: await apiClient.getServices();
+      setServices([]);
+      
+    } catch (error) {
+      console.error('Failed to load services:', error);
+      setError('Failed to load services');
+      setServices([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const filteredServices = services.filter(service =>
-    service.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    service.nameAr.includes(searchTerm) ||
-    service.description.toLowerCase().includes(searchTerm.toLowerCase())
+    (service.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (service.name_ar || service.nameAr || '').includes(searchTerm) ||
+    (service.description || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleAddService = () => {
@@ -239,7 +178,11 @@ const ServiceManagement = () => {
 
   const handleToggleStatus = (serviceId) => {
     setServices(services.map(s => 
-      s.id === serviceId ? { ...s, isActive: !s.isActive } : s
+      s.id === serviceId ? { 
+        ...s, 
+        is_active: s.is_active !== undefined ? !s.is_active : !s.isActive,
+        isActive: s.is_active !== undefined ? !s.is_active : !s.isActive 
+      } : s
     ));
   };
 
@@ -381,10 +324,10 @@ const ServiceManagement = () => {
             <Wrench className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{services.length}</div>
-            <p className="text-xs text-muted-foreground">
-              {services.filter(s => s.isActive).length} active
-            </p>
+                                <div className="text-2xl font-bold">{services.length}</div>
+                    <p className="text-xs text-muted-foreground">
+                      {services.filter(s => s.is_active !== undefined ? s.is_active : s.isActive).length} active
+                    </p>
           </CardContent>
         </Card>
         <Card>
@@ -394,7 +337,7 @@ const ServiceManagement = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {services.reduce((sum, s) => sum + s.totalProviders, 0)}
+              {services.reduce((sum, s) => sum + (s.total_providers || s.totalProviders || 0), 0)}
             </div>
             <p className="text-xs text-muted-foreground">
               Across all services
@@ -408,7 +351,7 @@ const ServiceManagement = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {services.reduce((sum, s) => sum + s.totalBookings, 0)}
+              {services.reduce((sum, s) => sum + (s.total_bookings || s.totalBookings || 0), 0)}
             </div>
             <p className="text-xs text-muted-foreground">
               This month
@@ -422,10 +365,10 @@ const ServiceManagement = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {(services.reduce((sum, s) => sum + s.monthlyRevenue, 0) / 1000).toFixed(0)}K EGP
+              {(services.reduce((sum, s) => sum + (s.monthly_revenue || s.monthlyRevenue || 0), 0) / 1000).toFixed(0)}K EGP
             </div>
             <p className="text-xs text-muted-foreground">
-              +15% from last month
+              Total monthly revenue
             </p>
           </CardContent>
         </Card>
@@ -453,110 +396,129 @@ const ServiceManagement = () => {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Service</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Pricing</TableHead>
-                  <TableHead>Providers</TableHead>
-                  <TableHead>Bookings</TableHead>
-                  <TableHead>Rating</TableHead>
-                  <TableHead>Revenue</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredServices.map((service) => (
-                  <TableRow key={service.id}>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{service.name}</div>
-                        <div className="text-sm text-muted-foreground" dir="rtl">
-                          {service.nameAr}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="capitalize">
-                        {service.category}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={service.isActive ? 'default' : 'secondary'}>
-                        {service.isActive ? 'Active' : 'Inactive'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm">
-                        <div>Base: {service.basePrice} EGP</div>
-                        <div className="text-muted-foreground">
-                          Emergency: {service.emergencyPrice} EGP
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center">
-                        <Users className="mr-1 h-4 w-4 text-muted-foreground" />
-                        {service.totalProviders}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center">
-                        <Calendar className="mr-1 h-4 w-4 text-muted-foreground" />
-                        {service.totalBookings}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center">
-                        ⭐ {service.averageRating.toFixed(1)}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center">
-                        <TrendingUp className="mr-1 h-4 w-4 text-muted-foreground" />
-                        {(service.monthlyRevenue / 1000).toFixed(0)}K EGP
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuItem onClick={() => handleEditService(service)}>
-                            <Edit className="mr-2 h-4 w-4" />
-                            Edit Service
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleToggleStatus(service.id)}>
-                            {service.isActive ? 'Deactivate' : 'Activate'}
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem 
-                            onClick={() => handleDeleteService(service.id)}
-                            className="text-destructive"
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete Service
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-
-          {filteredServices.length === 0 && (
+                    {loading ? (
             <div className="text-center py-8">
-              <p className="text-muted-foreground">No services found matching your search.</p>
+              <p className="text-muted-foreground">Loading services...</p>
             </div>
+          ) : error ? (
+            <div className="text-center py-8">
+              <p className="text-red-600">{error}</p>
+              <Button onClick={loadServices} className="mt-2">Try Again</Button>
+            </div>
+          ) : services.length === 0 ? (
+            <div className="text-center py-8">
+              <Wrench className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+              <p className="text-muted-foreground">No services found</p>
+              <p className="text-sm text-muted-foreground">Services will appear here once they are created</p>
+            </div>
+          ) : (
+            <>
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Service</TableHead>
+                      <TableHead>Category</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Pricing</TableHead>
+                      <TableHead>Providers</TableHead>
+                      <TableHead>Bookings</TableHead>
+                      <TableHead>Rating</TableHead>
+                      <TableHead>Revenue</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredServices.map((service) => (
+                      <TableRow key={service.id}>
+                        <TableCell>
+                          <div>
+                            <div className="font-medium">{service.name || 'N/A'}</div>
+                            <div className="text-sm text-muted-foreground" dir="rtl">
+                              {service.name_ar || service.nameAr || 'N/A'}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="capitalize">
+                            {service.category || 'N/A'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={(service.is_active !== undefined ? service.is_active : service.isActive) ? 'default' : 'secondary'}>
+                            {(service.is_active !== undefined ? service.is_active : service.isActive) ? 'Active' : 'Inactive'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-sm">
+                            <div>Base: {service.base_price || service.basePrice || 0} EGP</div>
+                            <div className="text-muted-foreground">
+                              Emergency: {service.emergency_price || service.emergencyPrice || 0} EGP
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center">
+                            <Users className="mr-1 h-4 w-4 text-muted-foreground" />
+                            {service.total_providers || service.totalProviders || 0}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center">
+                            <Calendar className="mr-1 h-4 w-4 text-muted-foreground" />
+                            {service.total_bookings || service.totalBookings || 0}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center">
+                            ⭐ {(service.average_rating || service.averageRating || 0).toFixed(1)}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center">
+                            <TrendingUp className="mr-1 h-4 w-4 text-muted-foreground" />
+                            {((service.monthly_revenue || service.monthlyRevenue || 0) / 1000).toFixed(0)}K EGP
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" className="h-8 w-8 p-0">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                              <DropdownMenuItem onClick={() => handleEditService(service)}>
+                                <Edit className="mr-2 h-4 w-4" />
+                                Edit Service
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleToggleStatus(service.id)}>
+                                {(service.is_active !== undefined ? service.is_active : service.isActive) ? 'Deactivate' : 'Activate'}
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem 
+                                onClick={() => handleDeleteService(service.id)}
+                                className="text-destructive"
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete Service
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {filteredServices.length === 0 && (
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground">No services found matching your search.</p>
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>

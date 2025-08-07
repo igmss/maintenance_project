@@ -37,41 +37,25 @@ import {
   BarChart3,
 } from 'lucide-react';
 
-// Fallback data for when API is loading or fails
-const fallbackStats = {
-  totalUsers: 0,
-  totalProviders: 0,
-  totalBookings: 0,
-  totalRevenue: 0,
-  userGrowth: 0,
-  providerGrowth: 0,
-  bookingGrowth: 0,
-  revenueGrowth: 0,
+// Initial empty state for stats
+const emptyStats = {
+  users: { total: 0, customers: 0, providers: 0, new_this_week: 0 },
+  providers: { total: 0, verified: 0, pending_verification: 0, verification_rate: 0 },
+  bookings: { total: 0, completed: 0, active: 0, this_month: 0, completion_rate: 0 },
+  revenue: { total_revenue: 0, platform_revenue: 0, monthly_revenue: 0, commission_rate: 0 },
+  services: { total_services: 0, total_categories: 0, average_rating: 0 }
 };
 
-// Mock chart data for revenue trends
-const mockChartData = [
-  { name: 'Jan', revenue: 12000, bookings: 150 },
-  { name: 'Feb', revenue: 15000, bookings: 180 },
-  { name: 'Mar', revenue: 18000, bookings: 220 },
-  { name: 'Apr', revenue: 22000, bookings: 280 },
-  { name: 'May', revenue: 20000, bookings: 260 },
-  { name: 'Jun', revenue: 25000, bookings: 320 },
-];
+// Chart data will be generated from real API data
+const generateChartData = (stats) => {
+  // For now, return empty data until we have historical data
+  // In production, this would come from a separate API endpoint with historical data
+  return [
+    { name: 'This Month', revenue: stats?.revenue?.monthly_revenue || 0, bookings: stats?.bookings?.this_month || 0 }
+  ];
+};
 
-const fallbackChartData = [
-  { name: 'Jan', bookings: 0, revenue: 0, users: 0 },
-  { name: 'Feb', bookings: 0, revenue: 0, users: 0 },
-  { name: 'Mar', bookings: 0, revenue: 0, users: 0 },
-  { name: 'Apr', bookings: 0, revenue: 0, users: 0 },
-  { name: 'May', bookings: 0, revenue: 0, users: 0 },
-  { name: 'Jun', bookings: 0, revenue: 0, users: 0 },
-  { name: 'Jul', bookings: 0, revenue: 0, users: 0 },
-];
-
-const fallbackServiceData = [
-  { name: 'Loading...', value: 100, color: '#e5e7eb' },
-];
+// No fallback data - dashboard will show real data or appropriate empty states
 
 const StatCard = ({ title, value, change, icon: Icon, trend }) => (
   <Card>
@@ -80,17 +64,18 @@ const StatCard = ({ title, value, change, icon: Icon, trend }) => (
       <Icon className="h-4 w-4 text-muted-foreground" />
     </CardHeader>
     <CardContent>
-      <div className="text-2xl font-bold">{value.toLocaleString()}</div>
+      <div className="text-2xl font-bold">
+        {typeof value === 'number' ? value.toLocaleString() : value}
+      </div>
       <div className="flex items-center text-xs text-muted-foreground">
-        {trend === 'up' ? (
-          <TrendingUp className="mr-1 h-3 w-3 text-green-500" />
-        ) : (
-          <TrendingDown className="mr-1 h-3 w-3 text-red-500" />
-        )}
-        <span className={trend === 'up' ? 'text-green-500' : 'text-red-500'}>
-          {change}%
+        {trend === 'up' && <TrendingUp className="mr-1 h-3 w-3 text-green-500" />}
+        {trend === 'down' && <TrendingDown className="mr-1 h-3 w-3 text-red-500" />}
+        <span>
+          {typeof change === 'number' 
+            ? `${change >= 0 ? '+' : ''}${change}% from last month`
+            : change
+          }
         </span>
-        <span className="ml-1">from last month</span>
       </div>
     </CardContent>
   </Card>
@@ -117,11 +102,11 @@ const getStatusBadge = (status) => {
 
 const Dashboard = () => {
   const [loading, setLoading] = useState(true);
-  const [timeRange, setTimeRange] = useState('7d');
-  const [stats, setStats] = useState(fallbackStats);
+  // Removed timeRange since we don't have historical data endpoints yet
+  const [stats, setStats] = useState(emptyStats);
   const [recentBookings, setRecentBookings] = useState([]);
-  const [chartData, setChartData] = useState(fallbackChartData);
-  const [serviceData, setServiceData] = useState(fallbackServiceData);
+  const [chartData, setChartData] = useState([]);
+  const [serviceData, setServiceData] = useState([]);
   const [error, setError] = useState(null);
 
   const loadDashboardData = async () => {
@@ -129,41 +114,28 @@ const Dashboard = () => {
       setLoading(true);
       setError(null);
 
-      // Load dashboard stats
+      // Load dashboard stats - this is the only real API endpoint we have
       const statsResponse = await apiClient.getDashboardStats();
       if (statsResponse) {
         setStats(statsResponse);
+        // Generate chart data from the stats
+        setChartData(generateChartData(statsResponse));
       }
 
-      // Load recent bookings
-      const bookingsResponse = await apiClient.getBookings({ 
-        limit: 5, 
-        sort: 'created_at:desc' 
-      });
-      if (bookingsResponse?.data) {
-        setRecentBookings(bookingsResponse.data);
-      }
-
-      // Load analytics data for charts
-      const analyticsResponse = await apiClient.getAnalytics({ 
-        period: timeRange 
-      });
-      if (analyticsResponse?.chartData) {
-        setChartData(analyticsResponse.chartData);
-      }
-      if (analyticsResponse?.serviceBreakdown) {
-        setServiceData(analyticsResponse.serviceBreakdown);
-      }
+      // For now, we don't have real booking or analytics endpoints
+      // These will show empty states until those endpoints are implemented
+      setRecentBookings([]);
+      setServiceData([]);
 
     } catch (error) {
       console.error('Failed to load dashboard data:', error);
       setError('Failed to load dashboard data. Using fallback data.');
       
-      // Keep fallback data on error
-      setStats(fallbackStats);
+      // Keep empty stats on error
+      setStats(emptyStats);
       setRecentBookings([]);
-      setChartData(fallbackChartData);
-      setServiceData(fallbackServiceData);
+      setChartData(generateChartData(null));
+      setServiceData([]);
     } finally {
       setLoading(false);
     }
@@ -203,29 +175,7 @@ const Dashboard = () => {
             Welcome back! Here's what's happening with your platform.
           </p>
         </div>
-        <div className="flex items-center space-x-2">
-          <Button
-            variant={timeRange === '7d' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setTimeRange('7d')}
-          >
-            7 days
-          </Button>
-          <Button
-            variant={timeRange === '30d' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setTimeRange('30d')}
-          >
-            30 days
-          </Button>
-          <Button
-            variant={timeRange === '90d' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setTimeRange('90d')}
-          >
-            90 days
-          </Button>
-        </div>
+        {/* Time range buttons removed - will be added back when historical data is available */}
       </div>
 
       {/* Error Message */}
@@ -239,31 +189,31 @@ const Dashboard = () => {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Total Users"
-          value={stats.totalUsers}
-          change={stats.userGrowth}
+          value={stats.users?.total || 0}
+          change={stats.users?.new_this_week || 0}
           icon={Users}
-          trend={stats.userGrowth >= 0 ? "up" : "down"}
+          trend="up"
         />
         <StatCard
           title="Service Providers"
-          value={stats.totalProviders}
-          change={stats.providerGrowth}
+          value={stats.providers?.total || 0}
+          change={`${stats.providers?.verified || 0}/${stats.providers?.pending_verification || 0}`}
           icon={UserCheck}
-          trend={stats.providerGrowth >= 0 ? "up" : "down"}
+          trend="neutral"
         />
         <StatCard
           title="Total Bookings"
-          value={stats.totalBookings}
-          change={stats.bookingGrowth}
+          value={stats.bookings?.total || 0}
+          change={stats.bookings?.this_month || 0}
           icon={Calendar}
-          trend={stats.bookingGrowth >= 0 ? "up" : "down"}
+          trend="up"
         />
         <StatCard
           title="Revenue (EGP)"
-          value={stats.totalRevenue}
-          change={stats.revenueGrowth}
+          value={stats.revenue?.total_revenue || 0}
+          change={stats.revenue?.monthly_revenue || 0}
           icon={DollarSign}
-          trend={stats.revenueGrowth >= 0 ? "up" : "down"}
+          trend="up"
         />
       </div>
 
@@ -302,7 +252,7 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={mockChartData}>
+              <LineChart data={generateChartData(stats)}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" />
                 <YAxis />

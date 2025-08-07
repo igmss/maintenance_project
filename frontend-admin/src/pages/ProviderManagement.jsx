@@ -30,75 +30,44 @@ import {
   Wrench,
 } from 'lucide-react';
 
-// Mock data for providers
-const mockProviders = [
-  {
-    id: 1,
-    name: 'Mohamed Ali',
-    email: 'mohamed.ali@email.com',
-    phone: '+20 100 123 4567',
-    location: 'Cairo, Egypt',
-    services: ['Plumbing', 'General Maintenance'],
-    rating: 4.8,
-    completedJobs: 156,
-    joinDate: '2024-01-15',
-    verificationStatus: 'pending',
-    documents: {
-      identity: { uploaded: true, verified: false },
-      certificate: { uploaded: true, verified: false },
-      criminalRecord: { uploaded: false, verified: false },
-    },
-    avatar: null,
-  },
-  {
-    id: 2,
-    name: 'Ahmed Hassan',
-    email: 'ahmed.hassan@email.com',
-    phone: '+20 101 234 5678',
-    location: 'Alexandria, Egypt',
-    services: ['Electrical', 'AC Repair'],
-    rating: 4.9,
-    completedJobs: 203,
-    joinDate: '2024-01-10',
-    verificationStatus: 'verified',
-    documents: {
-      identity: { uploaded: true, verified: true },
-      certificate: { uploaded: true, verified: true },
-      criminalRecord: { uploaded: true, verified: true },
-    },
-    avatar: null,
-  },
-  {
-    id: 3,
-    name: 'Khaled Omar',
-    email: 'khaled.omar@email.com',
-    phone: '+20 102 345 6789',
-    location: 'Giza, Egypt',
-    services: ['Carpentry', 'Painting'],
-    rating: 4.6,
-    completedJobs: 89,
-    joinDate: '2024-02-20',
-    verificationStatus: 'rejected',
-    documents: {
-      identity: { uploaded: true, verified: false },
-      certificate: { uploaded: false, verified: false },
-      criminalRecord: { uploaded: false, verified: false },
-    },
-    avatar: null,
-    rejectionReason: 'Incomplete documentation - missing professional certificate',
-  },
-];
+import { apiClient } from '../lib/api';
+import { useEffect } from 'react';
 
 const ProviderManagement = () => {
-  const [providers, setProviders] = useState(mockProviders);
+  const [providers, setProviders] = useState([]);
   const [selectedProvider, setSelectedProvider] = useState(null);
   const [showVerificationDialog, setShowVerificationDialog] = useState(false);
   const [verificationAction, setVerificationAction] = useState('');
   const [verificationNotes, setVerificationNotes] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Load providers data
+  useEffect(() => {
+    loadProviders();
+  }, []);
+
+  const loadProviders = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // For now, we don't have a real providers endpoint yet
+      // In production, this would call: await apiClient.getProviders();
+      setProviders([]);
+      
+    } catch (error) {
+      console.error('Failed to load providers:', error);
+      setError('Failed to load providers');
+      setProviders([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const getStatusBadge = (status) => {
     const statusConfig = {
-      verified: { 
+      approved: { 
         label: 'Verified', 
         variant: 'default', 
         icon: CheckCircle,
@@ -148,8 +117,8 @@ const ProviderManagement = () => {
       p.id === selectedProvider.id 
         ? { 
             ...p, 
-            verificationStatus: verificationAction,
-            ...(verificationAction === 'rejected' && { rejectionReason: verificationNotes })
+            verification_status: verificationAction,
+            ...(verificationAction === 'rejected' && { rejection_reason: verificationNotes })
           }
         : p
     ));
@@ -159,9 +128,9 @@ const ProviderManagement = () => {
     setSelectedProvider(null);
   };
 
-  const pendingProviders = providers.filter(p => p.verificationStatus === 'pending');
-  const verifiedProviders = providers.filter(p => p.verificationStatus === 'verified');
-  const rejectedProviders = providers.filter(p => p.verificationStatus === 'rejected');
+  const pendingProviders = providers.filter(p => p.verification_status === 'pending');
+  const verifiedProviders = providers.filter(p => p.verification_status === 'approved');
+  const rejectedProviders = providers.filter(p => p.verification_status === 'rejected');
 
   const ProviderCard = ({ provider, showActions = true }) => (
     <Card className="mb-4">
@@ -171,49 +140,52 @@ const ProviderManagement = () => {
             <Avatar className="h-12 w-12">
               <AvatarImage src={provider.avatar} alt={provider.name} />
               <AvatarFallback>
-                {provider.name.split(' ').map(n => n[0]).join('')}
+                {(provider.first_name && provider.last_name) ? 
+                  `${provider.first_name[0]}${provider.last_name[0]}` : 
+                  'SP'
+                }
               </AvatarFallback>
             </Avatar>
             <div className="flex-1">
               <div className="flex items-center space-x-2 mb-2">
-                <h3 className="text-lg font-semibold">{provider.name}</h3>
-                {getStatusBadge(provider.verificationStatus)}
+                <h3 className="text-lg font-semibold">{provider.first_name} {provider.last_name}</h3>
+                {getStatusBadge(provider.verification_status)}
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-muted-foreground mb-3">
                 <div className="flex items-center">
                   <Mail className="mr-2 h-4 w-4" />
-                  {provider.email}
+                  {provider.user?.email || 'N/A'}
                 </div>
                 <div className="flex items-center">
                   <Phone className="mr-2 h-4 w-4" />
-                  {provider.phone}
+                  {provider.user?.phone || 'N/A'}
                 </div>
                 <div className="flex items-center">
                   <MapPin className="mr-2 h-4 w-4" />
-                  {provider.location}
+                  {provider.business_name || 'N/A'}
                 </div>
                 <div className="flex items-center">
                   <Calendar className="mr-2 h-4 w-4" />
-                  Joined {provider.joinDate}
+                  Joined {provider.created_at ? new Date(provider.created_at).toLocaleDateString() : 'N/A'}
                 </div>
               </div>
 
               <div className="flex items-center space-x-4 mb-3">
                 <div className="flex items-center">
                   <Star className="mr-1 h-4 w-4 text-yellow-500" />
-                  <span className="font-medium">{provider.rating}</span>
+                  <span className="font-medium">{provider.average_rating || 0}</span>
                 </div>
                 <div className="text-sm text-muted-foreground">
-                  {provider.completedJobs} jobs completed
+                  {provider.total_completed_jobs || 0} jobs completed
                 </div>
               </div>
 
               <div className="flex flex-wrap gap-1 mb-3">
-                {provider.services.map((service, index) => (
+                {(provider.services || []).map((service, index) => (
                   <Badge key={index} variant="outline" className="text-xs">
                     <Wrench className="mr-1 h-3 w-3" />
-                    {service}
+                    {service.name || service}
                   </Badge>
                 ))}
               </div>
@@ -234,20 +206,20 @@ const ProviderManagement = () => {
                 })}
               </div>
 
-              {provider.rejectionReason && (
+              {provider.rejection_reason && (
                 <div className="mt-3 p-2 bg-red-50 border border-red-200 rounded text-sm text-red-700">
                   <AlertTriangle className="inline mr-1 h-4 w-4" />
-                  {provider.rejectionReason}
+                  {provider.rejection_reason}
                 </div>
               )}
             </div>
           </div>
 
-          {showActions && provider.verificationStatus === 'pending' && (
+          {showActions && provider.verification_status === 'pending' && (
             <div className="flex space-x-2">
               <Button
                 size="sm"
-                onClick={() => handleVerificationAction(provider, 'verified')}
+                onClick={() => handleVerificationAction(provider, 'approved')}
                 className="bg-green-600 hover:bg-green-700"
               >
                 <CheckCircle className="mr-1 h-4 w-4" />
@@ -294,7 +266,7 @@ const ProviderManagement = () => {
           <CardContent>
             <div className="text-2xl font-bold">{providers.length}</div>
             <p className="text-xs text-muted-foreground">
-              +8% from last month
+              Total registered providers
             </p>
           </CardContent>
         </Card>
@@ -360,10 +332,20 @@ const ProviderManagement = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {pendingProviders.length === 0 ? (
+              {loading ? (
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground">Loading providers...</p>
+                </div>
+              ) : error ? (
+                <div className="text-center py-8">
+                  <p className="text-red-600">{error}</p>
+                  <Button onClick={loadProviders} className="mt-2">Try Again</Button>
+                </div>
+              ) : pendingProviders.length === 0 ? (
                 <div className="text-center py-8">
                   <Clock className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
                   <p className="text-muted-foreground">No pending verifications</p>
+                  <p className="text-sm text-muted-foreground">New provider applications will appear here</p>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -389,6 +371,7 @@ const ProviderManagement = () => {
                 <div className="text-center py-8">
                   <CheckCircle className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
                   <p className="text-muted-foreground">No verified providers</p>
+                  <p className="text-sm text-muted-foreground">Approved providers will appear here</p>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -414,6 +397,7 @@ const ProviderManagement = () => {
                 <div className="text-center py-8">
                   <XCircle className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
                   <p className="text-muted-foreground">No rejected applications</p>
+                  <p className="text-sm text-muted-foreground">Rejected provider applications will appear here</p>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -432,10 +416,10 @@ const ProviderManagement = () => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {verificationAction === 'verified' ? 'Approve' : 'Reject'} Provider
+              {verificationAction === 'approved' ? 'Approve' : 'Reject'} Provider
             </DialogTitle>
             <DialogDescription>
-              {verificationAction === 'verified' 
+              {verificationAction === 'approved' 
                 ? 'Are you sure you want to approve this provider? They will be able to accept bookings.'
                 : 'Please provide a reason for rejecting this provider application.'
               }
@@ -448,12 +432,15 @@ const ProviderManagement = () => {
                 <Avatar>
                   <AvatarImage src={selectedProvider.avatar} alt={selectedProvider.name} />
                   <AvatarFallback>
-                    {selectedProvider.name.split(' ').map(n => n[0]).join('')}
+                    {(selectedProvider.first_name && selectedProvider.last_name) ? 
+                      `${selectedProvider.first_name[0]}${selectedProvider.last_name[0]}` : 
+                      'SP'
+                    }
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <h4 className="font-medium">{selectedProvider.name}</h4>
-                  <p className="text-sm text-muted-foreground">{selectedProvider.email}</p>
+                  <h4 className="font-medium">{selectedProvider.first_name} {selectedProvider.last_name}</h4>
+                  <p className="text-sm text-muted-foreground">{selectedProvider.user?.email}</p>
                 </div>
               </div>
 
@@ -477,11 +464,11 @@ const ProviderManagement = () => {
             </Button>
             <Button
               onClick={submitVerification}
-              className={verificationAction === 'verified' ? 'bg-green-600 hover:bg-green-700' : ''}
+              className={verificationAction === 'approved' ? 'bg-green-600 hover:bg-green-700' : ''}
               variant={verificationAction === 'rejected' ? 'destructive' : 'default'}
               disabled={verificationAction === 'rejected' && !verificationNotes.trim()}
             >
-              {verificationAction === 'verified' ? 'Approve Provider' : 'Reject Application'}
+              {verificationAction === 'approved' ? 'Approve Provider' : 'Reject Application'}
             </Button>
           </DialogFooter>
         </DialogContent>

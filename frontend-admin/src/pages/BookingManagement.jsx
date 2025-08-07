@@ -43,109 +43,18 @@ import {
   MessageSquare,
 } from 'lucide-react';
 
-// Mock booking data
-const mockBookings = [
-  {
-    id: 'BK001',
-    customer: {
-      name: 'Ahmed Hassan',
-      phone: '+20 100 123 4567',
-      email: 'ahmed.hassan@email.com'
-    },
-    provider: {
-      name: 'Mohamed Ali',
-      phone: '+20 101 234 5678',
-      rating: 4.8
-    },
-    service: 'Plumbing',
-    description: 'Kitchen sink repair - water leakage issue',
-    status: 'completed',
-    priority: 'normal',
-    amount: 150,
-    bookingDate: '2024-08-05',
-    scheduledTime: '10:00 AM',
-    completedTime: '11:30 AM',
-    address: 'Nasr City, Cairo',
-    paymentStatus: 'paid',
-    rating: 5,
-    customerNotes: 'Excellent service, very professional',
-  },
-  {
-    id: 'BK002',
-    customer: {
-      name: 'Fatima Omar',
-      phone: '+20 102 345 6789',
-      email: 'fatima.omar@email.com'
-    },
-    provider: {
-      name: 'Khaled Ahmed',
-      phone: '+20 103 456 7890',
-      rating: 4.6
-    },
-    service: 'Electrical',
-    description: 'Power outlet installation in living room',
-    status: 'in_progress',
-    priority: 'normal',
-    amount: 200,
-    bookingDate: '2024-08-05',
-    scheduledTime: '2:00 PM',
-    address: 'Maadi, Cairo',
-    paymentStatus: 'pending',
-  },
-  {
-    id: 'BK003',
-    customer: {
-      name: 'Sara Mohamed',
-      phone: '+20 104 567 8901',
-      email: 'sara.mohamed@email.com'
-    },
-    provider: {
-      name: 'Ali Hassan',
-      phone: '+20 105 678 9012',
-      rating: 4.9
-    },
-    service: 'AC Repair',
-    description: 'Air conditioner not cooling properly',
-    status: 'pending',
-    priority: 'urgent',
-    amount: 300,
-    bookingDate: '2024-08-06',
-    scheduledTime: '9:00 AM',
-    address: 'Heliopolis, Cairo',
-    paymentStatus: 'pending',
-  },
-  {
-    id: 'BK004',
-    customer: {
-      name: 'Omar Youssef',
-      phone: '+20 106 789 0123',
-      email: 'omar.youssef@email.com'
-    },
-    provider: {
-      name: 'Hassan Ali',
-      phone: '+20 107 890 1234',
-      rating: 4.7
-    },
-    service: 'Cleaning',
-    description: 'Deep cleaning for 3-bedroom apartment',
-    status: 'cancelled',
-    priority: 'normal',
-    amount: 120,
-    bookingDate: '2024-08-04',
-    scheduledTime: '8:00 AM',
-    address: 'Zamalek, Cairo',
-    paymentStatus: 'refunded',
-    cancellationReason: 'Customer requested cancellation',
-  },
-];
+import { apiClient } from '../lib/api';
+import { useEffect } from 'react';
 
 const BookingManagement = () => {
-  const [bookings, setBookings] = useState(mockBookings);
+  const [bookings, setBookings] = useState([]);
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [showBookingDialog, setShowBookingDialog] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterPriority, setFilterPriority] = useState('all');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const getStatusBadge = (status) => {
     const statusConfig = {
@@ -203,6 +112,29 @@ const BookingManagement = () => {
     return matchesSearch && matchesStatus && matchesPriority;
   });
 
+  // Load bookings data
+  useEffect(() => {
+    loadBookings();
+  }, []);
+
+  const loadBookings = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // For now, we don't have a real bookings endpoint
+      // In production, this would call: await apiClient.getBookings();
+      setBookings([]);
+      
+    } catch (error) {
+      console.error('Failed to load bookings:', error);
+      setError('Failed to load bookings');
+      setBookings([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleViewBooking = (booking) => {
     setSelectedBooking(booking);
     setShowBookingDialog(true);
@@ -242,7 +174,7 @@ const BookingManagement = () => {
           <CardContent>
             <div className="text-2xl font-bold">{bookings.length}</div>
             <p className="text-xs text-muted-foreground">
-              +12% from last month
+              Total bookings in system
             </p>
           </CardContent>
         </Card>
@@ -349,82 +281,101 @@ const BookingManagement = () => {
           </div>
 
           {/* Table */}
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Booking ID</TableHead>
-                  <TableHead>Customer</TableHead>
-                  <TableHead>Provider</TableHead>
-                  <TableHead>Service</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Priority</TableHead>
-                  <TableHead>Date & Time</TableHead>
-                  <TableHead>Amount</TableHead>
-                  <TableHead>Payment</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredBookings.map((booking) => (
-                  <TableRow key={booking.id}>
-                    <TableCell className="font-medium">{booking.id}</TableCell>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{booking.customer.name}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {booking.customer.phone}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{booking.provider.name}</div>
-                        <div className="text-sm text-muted-foreground">
-                          ⭐ {booking.provider.rating}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center">
-                        <Wrench className="mr-2 h-4 w-4 text-muted-foreground" />
-                        {booking.service}
-                      </div>
-                    </TableCell>
-                    <TableCell>{getStatusBadge(booking.status)}</TableCell>
-                    <TableCell>{getPriorityBadge(booking.priority)}</TableCell>
-                    <TableCell>
-                      <div className="text-sm">
-                        <div>{booking.bookingDate}</div>
-                        <div className="text-muted-foreground">{booking.scheduledTime}</div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center">
-                        <DollarSign className="mr-1 h-4 w-4 text-muted-foreground" />
-                        {booking.amount} EGP
-                      </div>
-                    </TableCell>
-                    <TableCell>{getPaymentStatusBadge(booking.paymentStatus)}</TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleViewBooking(booking)}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-
-          {filteredBookings.length === 0 && (
+          {loading ? (
             <div className="text-center py-8">
-              <p className="text-muted-foreground">No bookings found matching your criteria.</p>
+              <p className="text-muted-foreground">Loading bookings...</p>
             </div>
+          ) : error ? (
+            <div className="text-center py-8">
+              <p className="text-red-600">{error}</p>
+              <Button onClick={loadBookings} className="mt-2">Try Again</Button>
+            </div>
+          ) : bookings.length === 0 ? (
+            <div className="text-center py-8">
+              <Calendar className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+              <p className="text-muted-foreground">No bookings found</p>
+              <p className="text-sm text-muted-foreground">Bookings will appear here when customers make bookings</p>
+            </div>
+          ) : (
+            <>
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Booking ID</TableHead>
+                      <TableHead>Customer</TableHead>
+                      <TableHead>Provider</TableHead>
+                      <TableHead>Service</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Priority</TableHead>
+                      <TableHead>Date & Time</TableHead>
+                      <TableHead>Amount</TableHead>
+                      <TableHead>Payment</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredBookings.map((booking) => (
+                      <TableRow key={booking.id}>
+                        <TableCell className="font-medium">{booking.id}</TableCell>
+                        <TableCell>
+                          <div>
+                            <div className="font-medium">{booking.customer?.name || 'N/A'}</div>
+                            <div className="text-sm text-muted-foreground">
+                              {booking.customer?.phone || 'N/A'}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div>
+                            <div className="font-medium">{booking.provider?.name || 'N/A'}</div>
+                            <div className="text-sm text-muted-foreground">
+                              ⭐ {booking.provider?.rating || 'N/A'}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center">
+                            <Wrench className="mr-2 h-4 w-4 text-muted-foreground" />
+                            {booking.service || 'N/A'}
+                          </div>
+                        </TableCell>
+                        <TableCell>{getStatusBadge(booking.status)}</TableCell>
+                        <TableCell>{getPriorityBadge(booking.priority || 'normal')}</TableCell>
+                        <TableCell>
+                          <div className="text-sm">
+                            <div>{booking.scheduled_date || booking.bookingDate || 'N/A'}</div>
+                            <div className="text-muted-foreground">{booking.scheduled_time || booking.scheduledTime || 'N/A'}</div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center">
+                            <DollarSign className="mr-1 h-4 w-4 text-muted-foreground" />
+                            {booking.total_amount || booking.amount || 0} EGP
+                          </div>
+                        </TableCell>
+                        <TableCell>{getPaymentStatusBadge(booking.payment_status || booking.paymentStatus || 'pending')}</TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleViewBooking(booking)}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {filteredBookings.length === 0 && (
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground">No bookings found matching your criteria.</p>
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
