@@ -77,10 +77,10 @@ def get_dashboard_stats(current_user):
         total_services = Service.query.filter_by(is_active=True).count()
         total_categories = ServiceCategory.query.filter_by(is_active=True).count()
         
-        # Average rating
+        # Average rating (remove is_verified filter as column doesn't exist)
         avg_rating_query = db.session.query(
             func.avg(BookingReview.rating).label('avg_rating')
-        ).filter(BookingReview.is_verified == True)
+        )
         
         avg_rating_result = avg_rating_query.first()
         average_rating = round(float(avg_rating_result.avg_rating), 2) if avg_rating_result.avg_rating else 0
