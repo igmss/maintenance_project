@@ -275,7 +275,7 @@ class ApiClient {
 
   // Document verification methods
   async uploadProviderDocument(formData) {
-    return this.request('/providers/documents', {
+    return this.request('/providers/documents/upload', {
       method: 'POST',
       body: formData,
       isFormData: true

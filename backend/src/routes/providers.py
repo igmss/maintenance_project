@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
 from datetime import datetime
+import os
 from src.models import db
 from src.models.user import ServiceProviderProfile, ProviderDocument
 from src.models.service import ProviderService, Service
@@ -456,10 +457,97 @@ def delete_service_area(current_user, area_id):
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
+@providers_bp.route('/documents/upload', methods=['POST'])
+@provider_required
+def upload_document_file(current_user):
+    """Upload document file"""
+    try:
+        if 'document' not in request.files:
+            return jsonify({'error': 'No file provided'}), 400
+        
+        file = request.files['document']
+        document_type = request.form.get('document_type')
+        
+        if file.filename == '':
+            return jsonify({'error': 'No file selected'}), 400
+            
+        if not document_type:
+            return jsonify({'error': 'document_type is required'}), 400
+        
+        # Validate document type
+        valid_types = ['national_id', 'certificate', 'license', 'insurance', 'background_check']
+        if document_type not in valid_types:
+            return jsonify({'error': f'Invalid document type. Must be one of: {valid_types}'}), 400
+        
+        # Validate file type
+        allowed_extensions = {'.jpg', '.jpeg', '.png', '.pdf'}
+        file_ext = os.path.splitext(file.filename)[1].lower()
+        if file_ext not in allowed_extensions:
+            return jsonify({'error': 'Invalid file type. Only JPG, PNG, and PDF files are allowed'}), 400
+        
+        # Create uploads directory if it doesn't exist
+        upload_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'uploads', 'documents')
+        os.makedirs(upload_dir, exist_ok=True)
+        
+        # Generate unique filename
+        import uuid
+        file_id = str(uuid.uuid4())
+        filename = f"{current_user.provider_profile.id}_{document_type}_{file_id}{file_ext}"
+        file_path = os.path.join(upload_dir, filename)
+        
+        # Save file
+        file.save(file_path)
+        
+        # Create document URL (relative to API)
+        document_url = f"/uploads/documents/{filename}"
+        
+        # Check if document type already exists
+        existing = ProviderDocument.query.filter_by(
+            provider_id=current_user.provider_profile.id,
+            document_type=document_type
+        ).first()
+        
+        if existing:
+            # Delete old file if it exists
+            try:
+                old_filename = os.path.basename(existing.document_url)
+                old_file_path = os.path.join(upload_dir, old_filename)
+                if os.path.exists(old_file_path):
+                    os.remove(old_file_path)
+            except:
+                pass  # Continue even if old file deletion fails
+            
+            # Update existing document
+            existing.document_url = document_url
+            existing.verification_status = 'pending'
+            existing.verified_by = None
+            existing.verified_at = None
+            existing.rejection_reason = None
+            document = existing
+        else:
+            # Create new document
+            document = ProviderDocument(
+                provider_id=current_user.provider_profile.id,
+                document_type=document_type,
+                document_url=document_url
+            )
+            db.session.add(document)
+        
+        db.session.commit()
+        
+        return jsonify({
+            'message': 'Document uploaded successfully',
+            'document': document.to_dict()
+        }), 201
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
 @providers_bp.route('/documents', methods=['POST'])
 @provider_required
 def upload_document(current_user):
-    """Upload verification document"""
+    """Upload verification document (legacy endpoint)"""
     try:
         data = request.get_json()
         

@@ -75,31 +75,13 @@ const VerificationPage = () => {
     setUploadingDoc(selectedDocType);
     
     try {
-      // For now, we'll simulate file upload by creating a local URL
-      // In production, you would upload to a file storage service like AWS S3, Cloudinary, etc.
-      const fileUrl = URL.createObjectURL(selectedFile);
-      
-      // Send document data to backend
-      const documentData = {
-        document_type: selectedDocType,
-        document_url: fileUrl, // In production, this would be the uploaded file URL
-        file_name: selectedFile.name,
-        file_size: selectedFile.size
-      };
+      // Create FormData for file upload
+      const formData = new FormData();
+      formData.append('document', selectedFile);
+      formData.append('document_type', selectedDocType);
 
-      const response = await fetch(`${apiClient.baseURL}/providers/documents`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiClient.getToken()}`
-        },
-        body: JSON.stringify(documentData)
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to upload document');
-      }
+      // Upload using the API client
+      await apiClient.uploadProviderDocument(formData);
       
       // Reload verification data
       await loadVerificationData();
@@ -109,7 +91,7 @@ const VerificationPage = () => {
       setSelectedDocType('');
       document.getElementById('file-input').value = '';
       
-      alert('تم رفع الوثيقة بنجاح. ستتم مراجعتها من قبل الإدارة.');
+      alert('تم رفع الوثيقة بنجاح! ستتم مراجعتها من قبل الإدارة خلال 24-48 ساعة.');
     } catch (error) {
       console.error('Failed to upload document:', error);
       alert('حدث خطأ أثناء رفع الوثيقة: ' + error.message);

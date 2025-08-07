@@ -176,6 +176,13 @@ def create_app():
         if not ServiceCategory.query.first():
             create_sample_data()
     
+    # File serving route
+    @app.route('/uploads/<path:filename>')
+    def serve_uploaded_file(filename):
+        """Serve uploaded files"""
+        upload_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'uploads')
+        return send_from_directory(upload_dir, filename)
+    
     return app
 
 def create_sample_data():

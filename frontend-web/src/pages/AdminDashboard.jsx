@@ -141,9 +141,15 @@ const VerificationQueue = () => {
 
                   <div className="mb-4">
                     <img 
-                      src={document.document_url} 
+                      src={document.document_url.startsWith('/') 
+                        ? `https://maintenance-platform-backend.onrender.com${document.document_url}` 
+                        : document.document_url
+                      } 
                       alt={getDocumentTypeText(document.document_type)}
                       className="max-w-full h-64 object-contain border rounded"
+                      onError={(e) => {
+                        e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkltYWdlIG5vdCBhdmFpbGFibGU8L3RleHQ+PC9zdmc+';
+                      }}
                     />
                   </div>
 
