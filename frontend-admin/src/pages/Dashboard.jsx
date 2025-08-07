@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { apiClient } from '../lib/api';
 import {
   LineChart,
   Line,
@@ -36,64 +37,30 @@ import {
   BarChart3,
 } from 'lucide-react';
 
-// Mock data - replace with real API calls
-const mockStats = {
-  totalUsers: 15420,
-  totalProviders: 2847,
-  totalBookings: 8932,
-  totalRevenue: 245680,
-  userGrowth: 12.5,
-  providerGrowth: 8.3,
-  bookingGrowth: 15.2,
-  revenueGrowth: 18.7,
+// Fallback data for when API is loading or fails
+const fallbackStats = {
+  totalUsers: 0,
+  totalProviders: 0,
+  totalBookings: 0,
+  totalRevenue: 0,
+  userGrowth: 0,
+  providerGrowth: 0,
+  bookingGrowth: 0,
+  revenueGrowth: 0,
 };
 
-const mockRecentBookings = [
-  {
-    id: 1,
-    customer: 'Ahmed Hassan',
-    provider: 'Mohamed Ali',
-    service: 'Plumbing',
-    status: 'completed',
-    amount: 150,
-    date: '2024-08-05',
-  },
-  {
-    id: 2,
-    customer: 'Fatima Omar',
-    provider: 'Khaled Ahmed',
-    service: 'Electrical',
-    status: 'in_progress',
-    amount: 200,
-    date: '2024-08-05',
-  },
-  {
-    id: 3,
-    customer: 'Sara Mohamed',
-    provider: 'Ali Hassan',
-    service: 'Cleaning',
-    status: 'pending',
-    amount: 80,
-    date: '2024-08-05',
-  },
+const fallbackChartData = [
+  { name: 'Jan', bookings: 0, revenue: 0, users: 0 },
+  { name: 'Feb', bookings: 0, revenue: 0, users: 0 },
+  { name: 'Mar', bookings: 0, revenue: 0, users: 0 },
+  { name: 'Apr', bookings: 0, revenue: 0, users: 0 },
+  { name: 'May', bookings: 0, revenue: 0, users: 0 },
+  { name: 'Jun', bookings: 0, revenue: 0, users: 0 },
+  { name: 'Jul', bookings: 0, revenue: 0, users: 0 },
 ];
 
-const mockChartData = [
-  { name: 'Jan', bookings: 400, revenue: 24000, users: 240 },
-  { name: 'Feb', bookings: 300, revenue: 18000, users: 220 },
-  { name: 'Mar', bookings: 500, revenue: 30000, users: 280 },
-  { name: 'Apr', bookings: 450, revenue: 27000, users: 300 },
-  { name: 'May', bookings: 600, revenue: 36000, users: 350 },
-  { name: 'Jun', bookings: 750, revenue: 45000, users: 400 },
-  { name: 'Jul', bookings: 680, revenue: 40800, users: 380 },
-];
-
-const mockServiceData = [
-  { name: 'Plumbing', value: 35, color: '#3b82f6' },
-  { name: 'Electrical', value: 25, color: '#f59e0b' },
-  { name: 'Cleaning', value: 20, color: '#10b981' },
-  { name: 'AC Repair', value: 15, color: '#8b5cf6' },
-  { name: 'Others', value: 5, color: '#6b7280' },
+const fallbackServiceData = [
+  { name: 'Loading...', value: 100, color: '#e5e7eb' },
 ];
 
 const StatCard = ({ title, value, change, icon: Icon, trend }) => (
@@ -139,13 +106,61 @@ const getStatusBadge = (status) => {
 };
 
 const Dashboard = () => {
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState('7d');
+  const [stats, setStats] = useState(fallbackStats);
+  const [recentBookings, setRecentBookings] = useState([]);
+  const [chartData, setChartData] = useState(fallbackChartData);
+  const [serviceData, setServiceData] = useState(fallbackServiceData);
+  const [error, setError] = useState(null);
+
+  const loadDashboardData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Load dashboard stats
+      const statsResponse = await apiClient.getDashboardStats();
+      if (statsResponse) {
+        setStats(statsResponse);
+      }
+
+      // Load recent bookings
+      const bookingsResponse = await apiClient.getBookings({ 
+        limit: 5, 
+        sort: 'created_at:desc' 
+      });
+      if (bookingsResponse?.data) {
+        setRecentBookings(bookingsResponse.data);
+      }
+
+      // Load analytics data for charts
+      const analyticsResponse = await apiClient.getAnalytics({ 
+        period: timeRange 
+      });
+      if (analyticsResponse?.chartData) {
+        setChartData(analyticsResponse.chartData);
+      }
+      if (analyticsResponse?.serviceBreakdown) {
+        setServiceData(analyticsResponse.serviceBreakdown);
+      }
+
+    } catch (error) {
+      console.error('Failed to load dashboard data:', error);
+      setError('Failed to load dashboard data. Using fallback data.');
+      
+      // Keep fallback data on error
+      setStats(fallbackStats);
+      setRecentBookings([]);
+      setChartData(fallbackChartData);
+      setServiceData(fallbackServiceData);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    // Simulate API call
-    setLoading(true);
-    setTimeout(() => setLoading(false), 1000);
+    loadDashboardData();
   }, [timeRange]);
 
   if (loading) {
@@ -203,35 +218,42 @@ const Dashboard = () => {
         </div>
       </div>
 
+      {/* Error Message */}
+      {error && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <p className="text-yellow-800">{error}</p>
+        </div>
+      )}
+
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Total Users"
-          value={mockStats.totalUsers}
-          change={mockStats.userGrowth}
+          value={stats.totalUsers}
+          change={stats.userGrowth}
           icon={Users}
-          trend="up"
+          trend={stats.userGrowth >= 0 ? "up" : "down"}
         />
         <StatCard
           title="Service Providers"
-          value={mockStats.totalProviders}
-          change={mockStats.providerGrowth}
+          value={stats.totalProviders}
+          change={stats.providerGrowth}
           icon={UserCheck}
-          trend="up"
+          trend={stats.providerGrowth >= 0 ? "up" : "down"}
         />
         <StatCard
           title="Total Bookings"
-          value={mockStats.totalBookings}
-          change={mockStats.bookingGrowth}
+          value={stats.totalBookings}
+          change={stats.bookingGrowth}
           icon={Calendar}
-          trend="up"
+          trend={stats.bookingGrowth >= 0 ? "up" : "down"}
         />
         <StatCard
           title="Revenue (EGP)"
-          value={mockStats.totalRevenue}
-          change={mockStats.revenueGrowth}
+          value={stats.totalRevenue}
+          change={stats.revenueGrowth}
           icon={DollarSign}
-          trend="up"
+          trend={stats.revenueGrowth >= 0 ? "up" : "down"}
         />
       </div>
 
@@ -244,8 +266,8 @@ const Dashboard = () => {
             <CardDescription>Monthly booking trends</CardDescription>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <AreaChart data={mockChartData}>
+                            <ResponsiveContainer width="100%" height={300}>
+                  <AreaChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" />
                 <YAxis />
@@ -298,7 +320,7 @@ const Dashboard = () => {
             <ResponsiveContainer width="100%" height={250}>
               <PieChart>
                 <Pie
-                  data={mockServiceData}
+                  data={serviceData}
                   cx="50%"
                   cy="50%"
                   innerRadius={60}
@@ -306,7 +328,7 @@ const Dashboard = () => {
                   paddingAngle={5}
                   dataKey="value"
                 >
-                  {mockServiceData.map((entry, index) => (
+                  {serviceData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
@@ -314,7 +336,7 @@ const Dashboard = () => {
               </PieChart>
             </ResponsiveContainer>
             <div className="mt-4 space-y-2">
-              {mockServiceData.map((item, index) => (
+              {serviceData.map((item, index) => (
                 <div key={index} className="flex items-center justify-between text-sm">
                   <div className="flex items-center">
                     <div
@@ -344,27 +366,37 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {mockRecentBookings.map((booking) => (
+              {recentBookings.length > 0 ? recentBookings.map((booking) => (
                 <div
                   key={booking.id}
                   className="flex items-center justify-between p-4 border rounded-lg"
                 >
                   <div className="flex-1">
                     <div className="flex items-center justify-between mb-2">
-                      <h4 className="font-medium">{booking.customer}</h4>
+                      <h4 className="font-medium">
+                        {booking.customer_name || booking.customer || 'Unknown Customer'}
+                      </h4>
                       {getStatusBadge(booking.status)}
                     </div>
                     <div className="text-sm text-muted-foreground">
-                      <p>Provider: {booking.provider}</p>
-                      <p>Service: {booking.service}</p>
+                      <p>Provider: {booking.provider_name || booking.provider || 'Unknown Provider'}</p>
+                      <p>Service: {booking.service_name || booking.service || 'Unknown Service'}</p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="font-medium">EGP {booking.amount}</p>
-                    <p className="text-sm text-muted-foreground">{booking.date}</p>
+                    <p className="font-medium">EGP {booking.total_amount || booking.amount || 0}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {booking.scheduled_date || booking.date || 'No date'}
+                    </p>
                   </div>
                 </div>
-              ))}
+              )) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Calendar className="mx-auto h-12 w-12 mb-4" />
+                  <p>No recent bookings found</p>
+                  <p className="text-sm">Bookings will appear here when customers make bookings</p>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
