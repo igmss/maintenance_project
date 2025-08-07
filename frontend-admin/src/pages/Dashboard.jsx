@@ -49,6 +49,16 @@ const fallbackStats = {
   revenueGrowth: 0,
 };
 
+// Mock chart data for revenue trends
+const mockChartData = [
+  { name: 'Jan', revenue: 12000, bookings: 150 },
+  { name: 'Feb', revenue: 15000, bookings: 180 },
+  { name: 'Mar', revenue: 18000, bookings: 220 },
+  { name: 'Apr', revenue: 22000, bookings: 280 },
+  { name: 'May', revenue: 20000, bookings: 260 },
+  { name: 'Jun', revenue: 25000, bookings: 320 },
+];
+
 const fallbackChartData = [
   { name: 'Jan', bookings: 0, revenue: 0, users: 0 },
   { name: 'Feb', bookings: 0, revenue: 0, users: 0 },

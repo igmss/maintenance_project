@@ -275,7 +275,7 @@ def get_online_providers():
                 ProviderLocation.created_at == subquery.c.latest_update
             )
         ).filter(
-            ServiceProviderProfile.verification_status == 'verified',
+            ServiceProviderProfile.verification_status == 'approved',
             ServiceProviderProfile.is_available == True,
             ProviderLocation.is_online == True
         )
@@ -603,7 +603,7 @@ def get_provider_public_profile(provider_id):
         provider = ServiceProviderProfile.query.get_or_404(provider_id)
         
         # Only show verified providers
-        if provider.verification_status != 'verified':
+        if provider.verification_status != 'approved':
             return jsonify({'error': 'Provider not found'}), 404
         
         # Get provider services
@@ -700,7 +700,7 @@ def verify_provider(current_user, provider_id):
         provider = ServiceProviderProfile.query.get_or_404(provider_id)
         
         if data['action'] == 'approve':
-            provider.verification_status = 'verified'
+            provider.verification_status = 'approved'
             provider.background_check_status = 'clear'
             
             # Activate the user account

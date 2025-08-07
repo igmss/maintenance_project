@@ -35,7 +35,7 @@ def get_dashboard_stats(current_user):
         ).count()
         
         verified_providers = ServiceProviderProfile.query.filter_by(
-            verification_status='verified'
+            verification_status='approved'
         ).count()
         
         # Booking statistics

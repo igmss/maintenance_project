@@ -66,6 +66,9 @@ def register():
                 last_name=data['last_name'],
                 preferred_language=data.get('preferred_language', 'ar')
             )
+        elif data['user_type'] == 'admin':
+            # Admin users don't need a separate profile, just the user record
+            profile = None
         else:  # service_provider
             # Additional validation for service providers
             if 'national_id' not in data or not data['national_id']:
