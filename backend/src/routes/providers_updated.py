@@ -83,8 +83,8 @@ def add_provider_service(current_user):
             service_id=data['service_id'],
             custom_price=data.get('custom_price'),
             experience_years=data.get('experience_years', 0),
-            certification_url=data.get('certification_url'),
-            is_certified=data.get('is_certified', False)
+            is_available=data.get('is_available', True),
+            is_active=data.get('is_active', True)
         )
         
         db.session.add(provider_service)

@@ -42,6 +42,217 @@ import {
   getInitials 
 } from '../lib/utils';
 
+// Verification Queue Component
+const VerificationQueue = () => {
+  const [verificationQueue, setVerificationQueue] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedProvider, setSelectedProvider] = useState(null);
+  const [viewingDocuments, setViewingDocuments] = useState(false);
+
+  useEffect(() => {
+    loadVerificationQueue();
+  }, []);
+
+  const loadVerificationQueue = async () => {
+    try {
+      const response = await apiClient.getVerificationQueue({ per_page: 50 });
+      setVerificationQueue(response.providers || []);
+    } catch (error) {
+      console.error('Failed to load verification queue:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerification = async (providerId, action, reason = null) => {
+    try {
+      await apiClient.verifyProvider(providerId, action, reason);
+      alert(`تم ${action === 'approve' ? 'قبول' : 'رفض'} مقدم الخدمة بنجاح`);
+      await loadVerificationQueue();
+      setSelectedProvider(null);
+      setViewingDocuments(false);
+    } catch (error) {
+      console.error('Failed to verify provider:', error);
+      alert('حدث خطأ أثناء عملية التحقق');
+    }
+  };
+
+  const getDocumentStatusBadge = (status) => {
+    const configs = {
+      pending: { color: 'bg-yellow-100 text-yellow-800', text: 'قيد المراجعة' },
+      approved: { color: 'bg-green-100 text-green-800', text: 'معتمدة' },
+      rejected: { color: 'bg-red-100 text-red-800', text: 'مرفوضة' }
+    };
+    const config = configs[status] || configs.pending;
+    return <Badge className={config.color}>{config.text}</Badge>;
+  };
+
+  const getDocumentTypeText = (type) => {
+    const types = {
+      national_id: 'البطاقة الشخصية',
+      certificate: 'شهادة مهنية',
+      license: 'رخصة مزاولة المهنة',
+      insurance: 'بوليصة التأمين',
+      background_check: 'فحص السجل الجنائي'
+    };
+    return types[type] || type;
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  if (viewingDocuments && selectedProvider) {
+    return (
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>مراجعة وثائق مقدم الخدمة</CardTitle>
+              <CardDescription>
+                {selectedProvider.business_name} - {selectedProvider.first_name} {selectedProvider.last_name}
+              </CardDescription>
+            </div>
+            <Button variant="outline" onClick={() => setViewingDocuments(false)}>
+              العودة للقائمة
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-6">
+            {selectedProvider.documents?.length === 0 ? (
+              <p className="text-center text-gray-500 py-8">لم يتم رفع أي وثائق بعد</p>
+            ) : (
+              selectedProvider.documents?.map((document) => (
+                <div key={document.id} className="border rounded-lg p-4">
+                  <div className="flex items-start justify-between mb-4">
+                    <div>
+                      <h4 className="font-medium">{getDocumentTypeText(document.document_type)}</h4>
+                      <p className="text-sm text-gray-500">
+                        تم الرفع في {new Date(document.created_at).toLocaleDateString('ar-EG')}
+                      </p>
+                    </div>
+                    {getDocumentStatusBadge(document.verification_status)}
+                  </div>
+
+                  <div className="mb-4">
+                    <img 
+                      src={document.document_url} 
+                      alt={getDocumentTypeText(document.document_type)}
+                      className="max-w-full h-64 object-contain border rounded"
+                    />
+                  </div>
+
+                  {document.rejection_reason && (
+                    <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded">
+                      <p className="text-sm text-red-800">
+                        <strong>سبب الرفض:</strong> {document.rejection_reason}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+
+            <div className="flex justify-center space-x-4 space-x-reverse pt-6 border-t">
+              <Button
+                onClick={() => handleVerification(selectedProvider.id, 'approve')}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                <CheckCircle className="mr-2 h-4 w-4" />
+                اعتماد مقدم الخدمة
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  const reason = prompt('سبب الرفض:');
+                  if (reason) {
+                    handleVerification(selectedProvider.id, 'reject', reason);
+                  }
+                }}
+                className="border-red-300 text-red-700 hover:bg-red-50"
+              >
+                <AlertCircle className="mr-2 h-4 w-4" />
+                رفض التحقق
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center">
+          <Shield className="mr-2 h-5 w-5" />
+          طوابير التحقق من الهوية
+        </CardTitle>
+        <CardDescription>
+          مقدمو الخدمة بانتظار مراجعة وثائقهم ({verificationQueue.length} في الانتظار)
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {verificationQueue.length === 0 ? (
+          <div className="text-center py-8">
+            <CheckCircle className="mx-auto h-12 w-12 text-green-600 mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">لا توجد طلبات تحقق</h3>
+            <p className="text-gray-500">جميع مقدمي الخدمة تم التحقق منهم</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {verificationQueue.map((provider) => (
+              <div key={provider.id} className="border rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4 space-x-reverse">
+                    <Avatar className="h-12 w-12">
+                      <AvatarImage src={provider.profile_image_url} />
+                      <AvatarFallback>
+                        {getInitials(`${provider.first_name} ${provider.last_name}`)}
+                      </AvatarFallback>
+                    </Avatar>
+                    
+                    <div>
+                      <h3 className="font-medium">{provider.business_name}</h3>
+                      <p className="text-sm text-gray-600">
+                        {provider.first_name} {provider.last_name}
+                      </p>
+                      <div className="flex items-center space-x-4 space-x-reverse mt-1 text-xs text-gray-500">
+                        <span>تاريخ التسجيل: {formatDate(provider.created_at)}</span>
+                        <span>الوثائق: {provider.documents?.length || 0}</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2 space-x-reverse">
+                    <Badge variant="secondary">
+                      {provider.documents?.length || 0} وثيقة
+                    </Badge>
+                    <Button
+                      onClick={() => {
+                        setSelectedProvider(provider);
+                        setViewingDocuments(true);
+                      }}
+                    >
+                      <FileText className="mr-2 h-4 w-4" />
+                      مراجعة الوثائق
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
+
 const AdminDashboard = () => {
   const { user, logout } = useAuth();
   const [stats, setStats] = useState(null);
@@ -323,12 +534,13 @@ const AdminDashboard = () => {
 
         {/* Tabs for detailed views */}
         <Tabs defaultValue="users" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="users">المستخدمون</TabsTrigger>
-            <TabsTrigger value="bookings">الحجوزات</TabsTrigger>
-            <TabsTrigger value="providers">مقدمو الخدمة</TabsTrigger>
-            <TabsTrigger value="analytics">التحليلات</TabsTrigger>
-          </TabsList>
+                      <TabsList className="grid w-full grid-cols-5">
+              <TabsTrigger value="users">المستخدمون</TabsTrigger>
+              <TabsTrigger value="bookings">الحجوزات</TabsTrigger>
+              <TabsTrigger value="providers">مقدمو الخدمة</TabsTrigger>
+              <TabsTrigger value="verification">التحقق من الهوية</TabsTrigger>
+              <TabsTrigger value="analytics">التحليلات</TabsTrigger>
+            </TabsList>
           
           <TabsContent value="users" className="space-y-4">
             <Card>
@@ -464,6 +676,10 @@ const AdminDashboard = () => {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="verification" className="space-y-4">
+            <VerificationQueue />
           </TabsContent>
           
           <TabsContent value="analytics" className="space-y-4">

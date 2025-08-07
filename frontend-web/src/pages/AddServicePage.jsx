@@ -59,6 +59,14 @@ const AddServicePage = () => {
       
       setCategories(categoriesResponse.categories || []);
       setCurrentServices(providerResponse.services || []);
+      
+      // Check verification status
+      const profile = providerResponse.profile;
+      if (profile?.verification_status !== 'verified') {
+        alert('يجب التحقق من حسابك أولاً قبل إضافة الخدمات. سيتم توجيهك إلى صفحة التحقق.');
+        navigate('/verification');
+        return;
+      }
     } catch (error) {
       console.error('Failed to load data:', error);
     }

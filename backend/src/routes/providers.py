@@ -81,8 +81,8 @@ def add_provider_service(current_user):
             service_id=data['service_id'],
             custom_price=data.get('custom_price'),
             experience_years=data.get('experience_years', 0),
-            certification_url=data.get('certification_url'),
-            is_certified=data.get('is_certified', False)
+            is_available=data.get('is_available', True),
+            is_active=data.get('is_active', True)
         )
         
         db.session.add(provider_service)
@@ -115,10 +115,8 @@ def update_provider_service(current_user, provider_service_id):
             provider_service.custom_price = data['custom_price']
         if 'experience_years' in data:
             provider_service.experience_years = data['experience_years']
-        if 'certification_url' in data:
-            provider_service.certification_url = data['certification_url']
-        if 'is_certified' in data:
-            provider_service.is_certified = data['is_certified']
+        if 'is_available' in data:
+            provider_service.is_available = data['is_available']
         if 'is_active' in data:
             provider_service.is_active = data['is_active']
         

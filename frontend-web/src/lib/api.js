@@ -26,15 +26,23 @@ class ApiClient {
 
     const config = {
       headers: {
-        'Content-Type': 'application/json',
         ...(token && { Authorization: `Bearer ${token}` }),
         ...options.headers,
       },
       ...options,
     };
 
-    if (config.body && typeof config.body === 'object') {
-      config.body = JSON.stringify(config.body);
+    // Handle FormData for file uploads
+    if (options.isFormData && config.body instanceof FormData) {
+      // Don't set Content-Type for FormData - browser will set it automatically with boundary
+      // Don't stringify FormData
+    } else {
+      // Set JSON content type for regular requests
+      config.headers['Content-Type'] = 'application/json';
+      
+      if (config.body && typeof config.body === 'object') {
+        config.body = JSON.stringify(config.body);
+      }
     }
 
     try {
@@ -263,6 +271,27 @@ class ApiClient {
 
   async getSystemSettings() {
     return this.request('/admin/system/settings');
+  }
+
+  // Document verification methods
+  async uploadProviderDocument(formData) {
+    return this.request('/providers/documents', {
+      method: 'POST',
+      body: formData,
+      isFormData: true
+    });
+  }
+
+  async getVerificationQueue(params = {}) {
+    const queryString = new URLSearchParams(params).toString();
+    return this.request(`/providers/verification-queue${queryString ? `?${queryString}` : ''}`);
+  }
+
+  async verifyProvider(providerId, action, reason = null) {
+    return this.request(`/providers/${providerId}/verify`, {
+      method: 'POST',
+      body: { action, reason }
+    });
   }
 
   // Health check
