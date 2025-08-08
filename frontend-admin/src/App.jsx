@@ -8,7 +8,7 @@ import UserManagement from './pages/UserManagement';
 import ProviderManagement from './pages/ProviderManagement';
 import BookingManagement from './pages/BookingManagement';
 import ServiceManagement from './pages/ServiceManagement';
-import DocumentReview from './pages/DocumentReview';
+
 import Analytics from './pages/Analytics';
 import Settings from './pages/Settings';
 import './App.css';
@@ -49,7 +49,7 @@ const AppRoutes = () => {
                 <Route path="/providers" element={<ProviderManagement />} />
                 <Route path="/bookings" element={<BookingManagement />} />
                 <Route path="/services" element={<ServiceManagement />} />
-                <Route path="/documents" element={<DocumentReview />} />
+
                 <Route path="/analytics" element={<Analytics />} />
                 <Route path="/settings" element={<Settings />} />
               </Routes>

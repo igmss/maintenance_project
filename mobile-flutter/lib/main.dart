@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:easy_localization/easy_localization.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 // Import configuration
 import 'config/supabase_config.dart';
@@ -13,8 +12,7 @@ void main() async {
   // Initialize EasyLocalization
   await EasyLocalization.ensureInitialized();
   
-  // Initialize Supabase
-  await SupabaseConfig.initialize();
+  // Supabase initialization removed. Mobile app uses REST API (see ApiConfig).
   
   // Set preferred orientations
   await SystemChrome.setPreferredOrientations([
@@ -156,7 +154,7 @@ class _SplashScreenState extends State<SplashScreen>
                         borderRadius: BorderRadius.circular(24),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
+                            color: const Color.fromRGBO(0, 0, 0, 0.1),
                             blurRadius: 20,
                             offset: const Offset(0, 10),
                           ),
@@ -187,7 +185,7 @@ class _SplashScreenState extends State<SplashScreen>
                     Text(
                       'professional_services'.tr(),
                       style: theme.textTheme.bodyLarge?.copyWith(
-                        color: Colors.white.withOpacity(0.9),
+                        color: const Color.fromRGBO(255, 255, 255, 0.9),
                         fontSize: 16,
                       ),
                       textAlign: TextAlign.center,
@@ -301,7 +299,7 @@ class HomeTab extends StatelessWidget {
                 gradient: LinearGradient(
                   colors: [
                     theme.primaryColor,
-                    theme.primaryColor.withOpacity(0.8),
+                    theme.primaryColor.withValues(alpha: 0.8),
                   ],
                 ),
                 borderRadius: BorderRadius.circular(16),
@@ -320,7 +318,7 @@ class HomeTab extends StatelessWidget {
                   Text(
                     'maintenance_services'.tr(),
                     style: theme.textTheme.bodyLarge?.copyWith(
-                      color: Colors.white.withOpacity(0.9),
+                      color: const Color.fromRGBO(255, 255, 255, 0.9),
                     ),
                   ),
                 ],

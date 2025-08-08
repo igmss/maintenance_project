@@ -36,6 +36,22 @@ class ApiClient {
 
     try {
       const response = await fetch(url, config);
+      
+      // Handle 401 Unauthorized - token expired or invalid
+      if (response.status === 401) {
+        // Clear invalid token and redirect to login
+        this.setToken(null);
+        localStorage.removeItem('admin_token');
+        localStorage.removeItem('admin_user');
+        
+        // If we're not already on login page, redirect
+        if (!window.location.pathname.includes('/login')) {
+          window.location.href = '/login';
+        }
+        
+        throw new Error('Authentication failed. Please login again.');
+      }
+      
       const data = await response.json();
 
       if (!response.ok) {

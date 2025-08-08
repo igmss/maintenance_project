@@ -8,6 +8,11 @@ class AuthService {
   constructor() {
     this.token = localStorage.getItem(AUTH_STORAGE_KEY);
     this.user = JSON.parse(localStorage.getItem(USER_STORAGE_KEY) || 'null');
+    
+    // CRITICAL FIX: Set token on apiClient during initialization
+    if (this.token) {
+      apiClient.setToken(this.token);
+    }
   }
 
   async login(credentials) {
@@ -83,6 +88,34 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(authService.getUser());
   const [loading, setLoading] = useState(false);
+  
+  // Initialize authentication state on mount
+  useEffect(() => {
+    const initializeAuth = async () => {
+      const token = authService.getToken();
+      const storedUser = authService.getUser();
+      
+      if (token && storedUser) {
+        // Ensure the apiClient has the token
+        apiClient.setToken(token);
+        setUser(storedUser);
+        
+        // Validate token by making a test request
+        try {
+          await apiClient.request('/admin/dashboard/stats');
+        } catch (error) {
+          // If token is invalid, clear auth
+          if (error.message.includes('Authentication failed')) {
+            console.warn('Stored token is invalid, clearing auth');
+            authService.clearAuth();
+            setUser(null);
+          }
+        }
+      }
+    };
+    
+    initializeAuth();
+  }, []);
 
   const login = async (credentials) => {
     setLoading(true);

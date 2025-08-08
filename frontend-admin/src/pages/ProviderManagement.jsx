@@ -39,6 +39,8 @@ const ProviderManagement = () => {
   const [showVerificationDialog, setShowVerificationDialog] = useState(false);
   const [verificationAction, setVerificationAction] = useState('');
   const [verificationNotes, setVerificationNotes] = useState('');
+  const [providerDocuments, setProviderDocuments] = useState([]);
+  const [reviewingDocument, setReviewingDocument] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -114,28 +116,60 @@ const ProviderManagement = () => {
     return { status: 'pending', color: 'text-yellow-500', icon: Clock };
   };
 
-  const handleVerificationAction = (provider, action) => {
+  const handleVerificationAction = async (provider, action) => {
     setSelectedProvider(provider);
     setVerificationAction(action);
+    setVerificationNotes('');
+    
+    // Load provider documents
+    await loadProviderDocuments(provider.id);
     setShowVerificationDialog(true);
   };
 
-  const submitVerification = () => {
-    if (!selectedProvider) return;
+  const loadProviderDocuments = async (providerId) => {
+    try {
+      const response = await apiClient.getProviderDocuments(providerId);
+      setProviderDocuments(response.documents || []);
+    } catch (error) {
+      console.error('Failed to load provider documents:', error);
+      setProviderDocuments([]);
+    }
+  };
 
-    setProviders(providers.map(p => 
-      p.id === selectedProvider.id 
-        ? { 
-            ...p, 
-            verification_status: verificationAction,
-            ...(verificationAction === 'rejected' && { rejection_reason: verificationNotes })
-          }
-        : p
-    ));
+  const handleDocumentReview = async (document, action, reason = null) => {
+    try {
+      await apiClient.reviewDocument(document.id, action, reason);
+      // Reload documents for this provider
+      await loadProviderDocuments(selectedProvider.id);
+    } catch (error) {
+      console.error('Failed to review document:', error);
+      setError('Failed to review document');
+    }
+  };
 
-    setShowVerificationDialog(false);
-    setVerificationNotes('');
-    setSelectedProvider(null);
+  const submitVerification = async () => {
+    if (!selectedProvider || !verificationAction) return;
+    
+    try {
+      await apiClient.updateProviderVerification(selectedProvider.id, {
+        verification_status: verificationAction,
+        rejection_reason: verificationAction === 'rejected' ? verificationNotes : undefined
+      });
+      
+      // Reload providers to get updated data from server
+      await loadProviders();
+      
+      // Reset form
+      setShowVerificationDialog(false);
+      setSelectedProvider(null);
+      setVerificationAction('');
+      setVerificationNotes('');
+      setProviderDocuments([]);
+      
+    } catch (error) {
+      console.error('Failed to update verification:', error);
+      setError('Failed to update provider verification');
+    }
   };
 
   const pendingProviders = providers.filter(p => p.verification_status === 'pending');

@@ -372,7 +372,13 @@ def update_provider_verification(current_user, provider_id):
         if data['verification_status'] == 'rejected' and 'rejection_reason' in data:
             provider.rejection_reason = data['rejection_reason']
         
+        # If approving, also update user status
+        if data['verification_status'] == 'approved':
+            provider.user.status = 'active'
+        
         db.session.commit()
+        
+        logger.info(f"Provider {provider.id} verification status updated from {old_status} to {data['verification_status']} by admin {current_user.id}")
         
         return jsonify({
             'message': f'Provider verification status updated from {old_status} to {data["verification_status"]}',

@@ -1,29 +1,4 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
-
-class SupabaseConfig {
-  // Development configuration with actual credentials
-  static const String supabaseUrl = String.fromEnvironment(
-    'SUPABASE_URL',
-    defaultValue: 'https://mxfduvxgvobbnazeovfd.supabase.co',
-  );
-  
-  static const String supabaseAnonKey = String.fromEnvironment(
-    'SUPABASE_ANON_KEY',
-    defaultValue: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im14ZmR1dnhndm9iYm5hemVvdmZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ0MDk2ODMsImV4cCI6MjA2OTk4NTY4M30.j8u43-htgzBkRJxvrJUCO9bpc__V1fbFVQOezZRfGPA',
-  );
-  
-  static SupabaseClient get client => Supabase.instance.client;
-  
-  static Future<void> initialize() async {
-    await Supabase.initialize(
-      url: supabaseUrl,
-      anonKey: supabaseAnonKey,
-      debug: false, // Set to true for development
-    );
-  }
-}
-
-// API Configuration
+// API Configuration (aligned with web frontend)
 class ApiConfig {
   static const String baseUrl = String.fromEnvironment(
     'API_BASE_URL',

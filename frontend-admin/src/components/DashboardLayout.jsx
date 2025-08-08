@@ -39,7 +39,7 @@ const navigation = [
   { name: 'Providers', href: '/providers', icon: UserCheck },
   { name: 'Bookings', href: '/bookings', icon: Calendar },
   { name: 'Services', href: '/services', icon: Wrench },
-  { name: 'Document Review', href: '/documents', icon: FileText },
+
   { name: 'Analytics', href: '/analytics', icon: BarChart3 },
   { name: 'Settings', href: '/settings', icon: Settings },
 ];
