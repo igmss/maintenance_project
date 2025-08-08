@@ -135,6 +135,13 @@ class ApiClient {
     });
   }
 
+  async updateProviderVerificationStatus(id, action, reason = null) {
+    return this.request(`/admin/providers/${id}/verify`, {
+      method: 'POST',
+      body: JSON.stringify({ action, reason }),
+    });
+  }
+
   async verifyProvider(id, data) {
     return this.request(`/admin/providers/${id}/verify`, {
       method: 'POST',
@@ -224,6 +231,28 @@ class ApiClient {
       method: 'PUT',
       body: JSON.stringify(data),
     });
+  }
+
+  // Document Management
+  async getDocuments(params = {}) {
+    const queryString = new URLSearchParams(params).toString();
+    return this.request(`/admin/documents${queryString ? `?${queryString}` : ''}`);
+  }
+
+  async getProviderDocuments(providerId) {
+    return this.request(`/admin/providers/${providerId}/documents`);
+  }
+
+  async reviewDocument(documentId, action, reason = null) {
+    return this.request(`/admin/documents/${documentId}/review`, {
+      method: 'PUT',
+      body: JSON.stringify({ action, reason }),
+    });
+  }
+
+  async downloadDocument(documentUrl) {
+    // Handle document download/viewing
+    return this.request(documentUrl);
   }
 
   // Notifications
