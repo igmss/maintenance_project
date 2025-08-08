@@ -122,9 +122,8 @@ const BookingManagement = () => {
       setLoading(true);
       setError(null);
       
-      // For now, we don't have a real bookings endpoint
-      // In production, this would call: await apiClient.getBookings();
-      setBookings([]);
+      const response = await apiClient.getBookings();
+      setBookings(response.bookings || []);
       
     } catch (error) {
       console.error('Failed to load bookings:', error);
@@ -320,7 +319,7 @@ const BookingManagement = () => {
                         <TableCell className="font-medium">{booking.id}</TableCell>
                         <TableCell>
                           <div>
-                            <div className="font-medium">{booking.customer?.name || 'N/A'}</div>
+                            <div className="font-medium">{booking.customer?.first_name && booking.customer?.last_name ? `${booking.customer.first_name} ${booking.customer.last_name}` : 'N/A'}</div>
                             <div className="text-sm text-muted-foreground">
                               {booking.customer?.phone || 'N/A'}
                             </div>
@@ -328,7 +327,7 @@ const BookingManagement = () => {
                         </TableCell>
                         <TableCell>
                           <div>
-                            <div className="font-medium">{booking.provider?.name || 'N/A'}</div>
+                            <div className="font-medium">{booking.provider?.first_name && booking.provider?.last_name ? `${booking.provider.first_name} ${booking.provider.last_name}` : 'N/A'}</div>
                             <div className="text-sm text-muted-foreground">
                               ⭐ {booking.provider?.rating || 'N/A'}
                             </div>

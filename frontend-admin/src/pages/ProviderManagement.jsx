@@ -52,9 +52,8 @@ const ProviderManagement = () => {
       setLoading(true);
       setError(null);
       
-      // For now, we don't have a real providers endpoint yet
-      // In production, this would call: await apiClient.getProviders();
-      setProviders([]);
+      const response = await apiClient.getProviders();
+      setProviders(response.providers || []);
       
     } catch (error) {
       console.error('Failed to load providers:', error);

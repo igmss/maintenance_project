@@ -89,6 +89,13 @@ class ApiClient {
     });
   }
 
+  async updateUserStatus(id, status) {
+    return this.request(`/admin/users/${id}/status`, {
+      method: 'PUT',
+      body: JSON.stringify({ status }),
+    });
+  }
+
   async deleteUser(id) {
     return this.request(`/admin/users/${id}`, {
       method: 'DELETE',
@@ -103,6 +110,13 @@ class ApiClient {
 
   async getProviderById(id) {
     return this.request(`/admin/providers/${id}`);
+  }
+
+  async updateProviderVerification(id, data) {
+    return this.request(`/admin/providers/${id}/verification`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
   }
 
   async verifyProvider(id, data) {

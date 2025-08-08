@@ -73,9 +73,8 @@ const UserManagement = () => {
       setLoading(true);
       setError(null);
       
-      // For now, we don't have a real users endpoint yet
-      // In production, this would call: await apiClient.getUsers();
-      setUsers([]);
+      const response = await apiClient.getUsers();
+      setUsers(response.users || []);
       
     } catch (error) {
       console.error('Failed to load users:', error);
@@ -132,21 +131,28 @@ const UserManagement = () => {
     console.log('Edit user:', user);
   };
 
-  const handleDeleteUser = (user) => {
-    // In production, this would call the API to delete user
-    const userName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'this user';
-    if (window.confirm(`Are you sure you want to delete ${userName}?`)) {
-      setUsers(users.filter(u => u.id !== user.id));
+  const handleDeleteUser = async (user) => {
+    try {
+      const userName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'this user';
+      if (window.confirm(`Are you sure you want to delete ${userName}?`)) {
+        await apiClient.deleteUser(user.id);
+        await loadUsers(); // Reload users
+      }
+    } catch (error) {
+      console.error('Failed to delete user:', error);
+      setError('Failed to delete user');
     }
   };
 
-  const handleSuspendUser = (user) => {
-    // In production, this would call the API to suspend/activate user
-    setUsers(users.map(u => 
-      u.id === user.id 
-        ? { ...u, status: u.status === 'suspended' ? 'active' : 'suspended' }
-        : u
-    ));
+  const handleSuspendUser = async (user) => {
+    try {
+      const newStatus = user.status === 'suspended' ? 'active' : 'suspended';
+      await apiClient.updateUserStatus(user.id, newStatus);
+      await loadUsers(); // Reload users
+    } catch (error) {
+      console.error('Failed to update user status:', error);
+      setError('Failed to update user status');
+    }
   };
 
   return (

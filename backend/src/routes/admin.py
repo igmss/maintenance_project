@@ -284,6 +284,102 @@ def get_all_bookings(current_user):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@admin_bp.route('/providers', methods=['GET'])
+@admin_required
+def get_all_providers(current_user):
+    """Get all service providers with filtering and pagination"""
+    try:
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 20, type=int)
+        verification_status = request.args.get('verification_status')
+        search = request.args.get('search')
+        
+        # Build query - join User with ServiceProviderProfile
+        query = db.session.query(ServiceProviderProfile).join(User)
+        
+        # Filter by verification status
+        if verification_status:
+            query = query.filter(ServiceProviderProfile.verification_status == verification_status)
+        
+        # Search by name or email
+        if search:
+            query = query.filter(
+                or_(
+                    ServiceProviderProfile.first_name.ilike(f'%{search}%'),
+                    ServiceProviderProfile.last_name.ilike(f'%{search}%'),
+                    User.email.ilike(f'%{search}%'),
+                    User.phone.ilike(f'%{search}%')
+                )
+            )
+        
+        # Order by creation date (newest first)
+        query = query.order_by(ServiceProviderProfile.created_at.desc())
+        
+        # Paginate
+        providers = query.paginate(
+            page=page,
+            per_page=per_page,
+            error_out=False
+        )
+        
+        # Prepare provider data
+        providers_data = []
+        for provider in providers.items:
+            provider_data = provider.to_dict()
+            provider_data['user'] = provider.user.to_dict() if provider.user else None
+            providers_data.append(provider_data)
+        
+        return jsonify({
+            'providers': providers_data,
+            'pagination': {
+                'page': page,
+                'per_page': per_page,
+                'total': providers.total,
+                'pages': providers.pages,
+                'has_next': providers.has_next,
+                'has_prev': providers.has_prev
+            }
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@admin_bp.route('/providers/<provider_id>/verification', methods=['PUT'])
+@admin_required
+def update_provider_verification(current_user, provider_id):
+    """Update provider verification status"""
+    try:
+        data = request.get_json()
+        
+        if 'verification_status' not in data:
+            return jsonify({'error': 'verification_status is required'}), 400
+        
+        provider = ServiceProviderProfile.query.get_or_404(provider_id)
+        
+        # Validate status
+        valid_statuses = ['pending', 'approved', 'rejected']
+        if data['verification_status'] not in valid_statuses:
+            return jsonify({'error': f'Invalid status. Must be one of: {valid_statuses}'}), 400
+        
+        old_status = provider.verification_status
+        provider.verification_status = data['verification_status']
+        provider.updated_at = datetime.utcnow()
+        
+        # Add rejection reason if provided
+        if data['verification_status'] == 'rejected' and 'rejection_reason' in data:
+            provider.rejection_reason = data['rejection_reason']
+        
+        db.session.commit()
+        
+        return jsonify({
+            'message': f'Provider verification status updated from {old_status} to {data["verification_status"]}',
+            'provider': provider.to_dict()
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
 @admin_bp.route('/services/categories', methods=['POST'])
 @admin_required
 def create_service_category(current_user):
@@ -510,6 +606,103 @@ def get_all_service_categories(current_user):
         
         return jsonify({
             'categories': [category.to_dict(language) for category in categories]
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@admin_bp.route('/analytics', methods=['GET'])
+@admin_required
+def get_analytics_data(current_user):
+    """Get comprehensive analytics data for admin dashboard"""
+    try:
+        # Date range for analytics
+        today = datetime.utcnow().date()
+        week_ago = today - timedelta(days=7)
+        month_ago = today - timedelta(days=30)
+        year_ago = today - timedelta(days=365)
+        
+        # Revenue analytics
+        revenue_query = db.session.query(
+            func.sum(Booking.total_price).label('total'),
+            func.count(Booking.id).label('count')
+        ).filter(
+            Booking.booking_status == 'completed',
+            Booking.total_price.isnot(None)
+        )
+        
+        total_revenue = revenue_query.scalar() or 0
+        
+        # Monthly revenue for chart
+        monthly_revenue = db.session.query(
+            func.date_trunc('month', Booking.created_at).label('month'),
+            func.sum(Booking.total_price).label('revenue'),
+            func.count(Booking.id).label('bookings')
+        ).filter(
+            Booking.booking_status == 'completed',
+            Booking.created_at >= datetime.combine(year_ago, datetime.min.time())
+        ).group_by(
+            func.date_trunc('month', Booking.created_at)
+        ).order_by('month').all()
+        
+        # Service performance
+        service_stats = db.session.query(
+            Service.name_ar,
+            Service.name_en,
+            func.count(Booking.id).label('bookings'),
+            func.sum(Booking.total_price).label('revenue'),
+            func.avg(BookingReview.rating).label('avg_rating')
+        ).join(Booking).outerjoin(BookingReview).filter(
+            Booking.booking_status == 'completed'
+        ).group_by(Service.id, Service.name_ar, Service.name_en).order_by(
+            func.count(Booking.id).desc()
+        ).limit(10).all()
+        
+        # Provider performance
+        provider_stats = db.session.query(
+            ServiceProviderProfile.first_name,
+            ServiceProviderProfile.last_name,
+            func.count(Booking.id).label('bookings'),
+            func.sum(Booking.total_price).label('revenue'),
+            func.avg(BookingReview.rating).label('avg_rating')
+        ).join(Booking).outerjoin(BookingReview).filter(
+            Booking.booking_status == 'completed'
+        ).group_by(
+            ServiceProviderProfile.id,
+            ServiceProviderProfile.first_name,
+            ServiceProviderProfile.last_name
+        ).order_by(
+            func.count(Booking.id).desc()
+        ).limit(10).all()
+        
+        return jsonify({
+            'revenue': {
+                'total': float(total_revenue),
+                'monthly_data': [
+                    {
+                        'month': row.month.strftime('%Y-%m'),
+                        'revenue': float(row.revenue or 0),
+                        'bookings': row.bookings
+                    } for row in monthly_revenue
+                ]
+            },
+            'services': [
+                {
+                    'name': row.name_ar,
+                    'name_en': row.name_en,
+                    'bookings': row.bookings,
+                    'revenue': float(row.revenue or 0),
+                    'rating': float(row.avg_rating or 0)
+                } for row in service_stats
+            ],
+            'providers': [
+                {
+                    'name': f"{row.first_name} {row.last_name}",
+                    'bookings': row.bookings,
+                    'revenue': float(row.revenue or 0),
+                    'rating': float(row.avg_rating or 0)
+                } for row in provider_stats
+            ]
         }), 200
         
     except Exception as e:
