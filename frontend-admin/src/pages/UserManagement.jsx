@@ -74,7 +74,19 @@ const UserManagement = () => {
       setError(null);
       
       const response = await apiClient.getUsers();
-      setUsers(response.users || []);
+      
+      // Ensure each user has required properties with defaults
+      const processedUsers = (response.users || []).map(user => ({
+        ...user,
+        first_name: user.first_name || '',
+        last_name: user.last_name || '',
+        email: user.email || '',
+        phone: user.phone || '',
+        status: user.status || 'active',
+        user_type: user.user_type || 'customer'
+      }));
+      
+      setUsers(processedUsers);
       
     } catch (error) {
       console.error('Failed to load users:', error);

@@ -53,7 +53,18 @@ const ProviderManagement = () => {
       setError(null);
       
       const response = await apiClient.getProviders();
-      setProviders(response.providers || []);
+      
+      // Ensure each provider has required properties with defaults
+      const processedProviders = (response.providers || []).map(provider => ({
+        ...provider,
+        documents: provider.documents || {},
+        services: provider.services || [],
+        first_name: provider.first_name || '',
+        last_name: provider.last_name || '',
+        user: provider.user || null
+      }));
+      
+      setProviders(processedProviders);
       
     } catch (error) {
       console.error('Failed to load providers:', error);
@@ -191,7 +202,7 @@ const ProviderManagement = () => {
 
               {/* Document Status */}
               <div className="grid grid-cols-3 gap-4 text-xs">
-                {Object.entries(provider.documents).map(([docType, doc]) => {
+                {provider.documents && Object.entries(provider.documents).map(([docType, doc]) => {
                   const status = getDocumentStatus(doc);
                   const Icon = status.icon;
                   return (
@@ -203,6 +214,11 @@ const ProviderManagement = () => {
                     </div>
                   );
                 })}
+                {(!provider.documents || Object.keys(provider.documents).length === 0) && (
+                  <div className="col-span-3 text-muted-foreground">
+                    No documents uploaded
+                  </div>
+                )}
               </div>
 
               {provider.rejection_reason && (

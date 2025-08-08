@@ -123,7 +123,18 @@ const BookingManagement = () => {
       setError(null);
       
       const response = await apiClient.getBookings();
-      setBookings(response.bookings || []);
+      
+      // Ensure each booking has required properties with defaults
+      const processedBookings = (response.bookings || []).map(booking => ({
+        ...booking,
+        customer: booking.customer || {},
+        provider: booking.provider || {},
+        service: booking.service || {},
+        booking_status: booking.booking_status || 'pending',
+        total_price: booking.total_price || 0
+      }));
+      
+      setBookings(processedBookings);
       
     } catch (error) {
       console.error('Failed to load bookings:', error);
