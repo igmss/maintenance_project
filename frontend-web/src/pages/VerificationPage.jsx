@@ -37,7 +37,7 @@ const VerificationPage = () => {
     try {
       const profileResponse = await apiClient.getProviderProfile();
       setProfile(profileResponse.profile);
-      setDocuments(profileResponse.documents || []);
+      setDocuments((profileResponse.profile && profileResponse.profile.documents) || []);
     } catch (error) {
       console.error('Failed to load verification data:', error);
     } finally {
@@ -348,7 +348,15 @@ const VerificationPage = () => {
                     <div className="flex items-center space-x-2 space-x-reverse">
                       {getVerificationStatusBadge(document.verification_status)}
                       <Button variant="outline" size="sm" asChild>
-                        <a href={document.document_url} target="_blank" rel="noopener noreferrer">
+                        <a
+                          href={
+                            document.document_url && document.document_url.startsWith('/')
+                              ? apiClient.baseURLWithoutApi + document.document_url
+                              : document.document_url
+                          }
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
                           <Eye className="h-4 w-4" />
                         </a>
                       </Button>

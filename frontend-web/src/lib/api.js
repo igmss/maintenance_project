@@ -68,6 +68,11 @@ class ApiClient {
     }
   }
 
+  // Expose baseURL for building absolute links when backend returns relative paths
+  get baseURLWithoutApi() {
+    return this.baseURL.replace(/\/api$/, '');
+  }
+
   // Authentication endpoints
   async register(userData) {
     return this.request('/auth/register', {
