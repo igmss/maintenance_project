@@ -326,6 +326,18 @@ def get_all_providers(current_user):
                     provider_data['user'] = provider.user.to_dict()
                 else:
                     provider_data['user'] = None
+                
+                # Get documents and validate them
+                documents = ProviderDocument.query.filter_by(provider_id=provider.id).all()
+                valid_documents = []
+                
+                for doc in documents:
+                    doc_dict = doc.to_dict()
+                    # Only include documents with valid URLs
+                    if doc_dict.get('document_url') and doc_dict['document_url'].strip() and doc_dict['document_url'] != '#':
+                        valid_documents.append(doc_dict)
+                
+                provider_data['documents'] = valid_documents
                 providers_data.append(provider_data)
             except Exception as provider_error:
                 print(f"Error processing provider {provider.id}: {provider_error}")
@@ -363,6 +375,24 @@ def update_provider_verification(current_user, provider_id):
         valid_statuses = ['pending', 'approved', 'rejected']
         if data['verification_status'] not in valid_statuses:
             return jsonify({'error': f'Invalid status. Must be one of: {valid_statuses}'}), 400
+        
+        # Validate documents before approval
+        if data['verification_status'] == 'approved':
+            documents = ProviderDocument.query.filter_by(provider_id=provider_id).all()
+            required_docs = ['national_id', 'certificate', 'background_check']
+            
+            # Check if all required documents are uploaded and approved
+            valid_docs = [
+                doc.document_type for doc in documents 
+                if doc.verification_status == 'approved' and doc.document_url and doc.document_url.strip() != '' and doc.document_url != '#'
+            ]
+            
+            missing_docs = [doc for doc in required_docs if doc not in valid_docs]
+            
+            if missing_docs:
+                return jsonify({
+                    'error': f'Cannot approve provider. Missing or unapproved required documents: {", ".join(missing_docs)}'
+                }), 400
         
         old_status = provider.verification_status
         provider.verification_status = data['verification_status']
@@ -446,7 +476,11 @@ def review_document(current_user, document_id):
         
         document = ProviderDocument.query.get_or_404(document_id)
         
+        # Validate document has a valid URL before approval
         if data['action'] == 'approve':
+            if not document.document_url or document.document_url.strip() == '' or document.document_url == '#':
+                return jsonify({'error': 'Cannot approve document without valid file upload'}), 400
+            
             document.verification_status = 'approved'
             document.verified_by = current_user.id
             document.verified_at = datetime.utcnow()
@@ -465,8 +499,12 @@ def review_document(current_user, document_id):
         provider = document.provider
         all_docs = ProviderDocument.query.filter_by(provider_id=provider.id).all()
         
-        required_docs = ['national_id', 'certificate', 'license']  # Define required docs
-        approved_docs = [doc.document_type for doc in all_docs if doc.verification_status == 'approved']
+        required_docs = ['national_id', 'certificate', 'background_check']  # Define required docs
+        # Only count documents with valid URLs as approved
+        approved_docs = [
+            doc.document_type for doc in all_docs 
+            if doc.verification_status == 'approved' and doc.document_url and doc.document_url.strip() != '' and doc.document_url != '#'
+        ]
         
         # Auto-approve provider if all required documents are approved
         if all(doc_type in approved_docs for doc_type in required_docs) and provider.verification_status == 'pending':
