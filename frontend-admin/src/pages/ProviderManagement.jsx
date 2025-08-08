@@ -163,7 +163,16 @@ const ProviderManagement = () => {
   };
 
   const getDocumentStatus = (doc) => {
-    if (!doc || !doc.document_url) return { status: 'missing', color: 'text-red-500', icon: XCircle };
+    // More robust document validation
+    if (!doc || !doc.document_url || doc.document_url.trim() === '') {
+      return { status: 'missing', color: 'text-red-500', icon: XCircle };
+    }
+    
+    // Check if document_url is just a placeholder or empty
+    if (doc.document_url === '#' || doc.document_url === '' || doc.document_url === null) {
+      return { status: 'missing', color: 'text-red-500', icon: XCircle };
+    }
+    
     if (doc.verification_status === 'approved') return { status: 'verified', color: 'text-green-500', icon: CheckCircle };
     if (doc.verification_status === 'rejected') return { status: 'rejected', color: 'text-red-500', icon: XCircle };
     return { status: 'pending', color: 'text-yellow-500', icon: Clock };
@@ -264,35 +273,59 @@ const ProviderManagement = () => {
               <div className="flex items-center justify-between mb-3">
                 <div className="grid grid-cols-3 gap-4 text-xs flex-1">
                   {provider.documents && provider.documents.length > 0 ? (
-                    provider.documents.map((doc, index) => {
-                      const status = getDocumentStatus(doc);
-                      const Icon = status.icon;
-                      return (
-                        <div key={index} className="flex items-center">
-                          <Icon className={`mr-1 h-3 w-3 ${status.color}`} />
-                          <span className="capitalize">
-                            {doc.document_type === 'background_check' ? 'Background Check' : doc.document_type}
-                          </span>
-                        </div>
-                      );
-                    })
+                    (() => {
+                      // Filter out documents with invalid URLs
+                      const validDocuments = provider.documents.filter(doc => {
+                        const status = getDocumentStatus(doc);
+                        return status.status !== 'missing';
+                      });
+                      
+                      if (validDocuments.length === 0) {
+                        return (
+                          <div className="col-span-3 text-muted-foreground">
+                            No valid documents uploaded
+                          </div>
+                        );
+                      }
+                      
+                      return validDocuments.map((doc, index) => {
+                        const status = getDocumentStatus(doc);
+                        const Icon = status.icon;
+                        return (
+                          <div key={index} className="flex items-center">
+                            <Icon className={`mr-1 h-3 w-3 ${status.color}`} />
+                            <span className="capitalize">
+                              {doc.document_type === 'background_check' ? 'Background Check' : doc.document_type}
+                            </span>
+                          </div>
+                        );
+                      });
+                    })()
                   ) : (
                     <div className="col-span-3 text-muted-foreground">
                       No documents uploaded
                     </div>
                   )}
                 </div>
-                {provider.documents && provider.documents.length > 0 && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => viewProviderDocuments(provider)}
-                    className="ml-4"
-                  >
-                    <Eye className="mr-1 h-3 w-3" />
-                    View Docs
-                  </Button>
-                )}
+                {(() => {
+                  // Only show View Docs button if there are valid documents
+                  const validDocuments = provider.documents?.filter(doc => {
+                    const status = getDocumentStatus(doc);
+                    return status.status !== 'missing';
+                  }) || [];
+                  
+                  return validDocuments.length > 0 && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => viewProviderDocuments(provider)}
+                      className="ml-4"
+                    >
+                      <Eye className="mr-1 h-3 w-3" />
+                      View Docs ({validDocuments.length})
+                    </Button>
+                  );
+                })()}
               </div>
 
               {provider.rejection_reason && (
@@ -509,7 +542,7 @@ const ProviderManagement = () => {
             </DialogTitle>
             <DialogDescription>
               {verificationAction === 'approved' 
-                ? 'Are you sure you want to approve this provider? They will be able to accept bookings.'
+                ? 'Are you sure you want to approve this provider? They will be able to accept bookings. Please ensure all required documents are uploaded and verified.'
                 : 'Please provide a reason for rejecting this provider application.'
               }
             </DialogDescription>
@@ -517,20 +550,53 @@ const ProviderManagement = () => {
           
           {selectedProvider && (
             <div className="space-y-4">
-              <div className="flex items-center space-x-3">
-                <Avatar>
-                  <AvatarImage src={selectedProvider.avatar} alt={selectedProvider.name} />
-                  <AvatarFallback>
-                    {(selectedProvider.first_name && selectedProvider.last_name) ? 
-                      `${selectedProvider.first_name[0]}${selectedProvider.last_name[0]}` : 
-                      'SP'
-                    }
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <h4 className="font-medium">{selectedProvider.first_name} {selectedProvider.last_name}</h4>
-                  <p className="text-sm text-muted-foreground">{selectedProvider.user?.email}</p>
+              <div className="space-y-3">
+                <div className="flex items-center space-x-3">
+                  <Avatar>
+                    <AvatarImage src={selectedProvider.avatar} alt={selectedProvider.name} />
+                    <AvatarFallback>
+                      {(selectedProvider.first_name && selectedProvider.last_name) ? 
+                        `${selectedProvider.first_name[0]}${selectedProvider.last_name[0]}` : 
+                        'SP'
+                      }
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <h4 className="font-medium">{selectedProvider.first_name} {selectedProvider.last_name}</h4>
+                    <p className="text-sm text-muted-foreground">{selectedProvider.user?.email}</p>
+                  </div>
                 </div>
+                
+                {/* Document Status Summary */}
+                {verificationAction === 'approved' && (
+                  <div className="p-3 bg-gray-50 rounded-lg">
+                    <h5 className="text-sm font-medium mb-2">Document Status:</h5>
+                    <div className="space-y-1 text-xs">
+                      {(() => {
+                        const validDocuments = selectedProvider.documents?.filter(doc => {
+                          const status = getDocumentStatus(doc);
+                          return status.status !== 'missing';
+                        }) || [];
+                        
+                        const requiredDocs = ['national_id', 'certificate', 'background_check'];
+                        const approvedDocs = validDocuments.filter(doc => doc.verification_status === 'approved');
+                        
+                        return (
+                          <div>
+                            <p className="text-muted-foreground">
+                              Valid Documents: {validDocuments.length} | Approved: {approvedDocs.length} | Required: {requiredDocs.length}
+                            </p>
+                            {approvedDocs.length < requiredDocs.length && (
+                              <p className="text-red-600 font-medium">
+                                ⚠️ Not all required documents are approved
+                              </p>
+                            )}
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {verificationAction === 'rejected' && (
@@ -604,15 +670,15 @@ const ProviderManagement = () => {
                          </div>
                        </div>
                        <div className="flex items-center space-x-2">
-                         <Button
-                           size="sm"
-                           variant="outline"
-                           onClick={() => downloadDocument(doc.document_url)}
-                           disabled={!doc.document_url}
-                         >
-                           <Download className="mr-1 h-4 w-4" />
-                           View
-                         </Button>
+                                                 <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => downloadDocument(doc.document_url)}
+                          disabled={!doc.document_url || doc.document_url === '#' || doc.document_url.trim() === ''}
+                        >
+                          <Download className="mr-1 h-4 w-4" />
+                          {(!doc.document_url || doc.document_url === '#' || doc.document_url.trim() === '') ? 'No File' : 'View'}
+                        </Button>
                          {doc.verification_status === 'pending' && (
                            <div className="flex space-x-1">
                              <Button
