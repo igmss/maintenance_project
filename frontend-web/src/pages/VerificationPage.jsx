@@ -103,7 +103,7 @@ const VerificationPage = () => {
   const getVerificationStatusBadge = (status) => {
     const configs = {
       pending: { color: 'bg-yellow-100 text-yellow-800', text: 'قيد المراجعة', icon: Clock },
-      approved: { color: 'bg-green-100 text-green-800', text: 'موافق عليها', icon: CheckCircle },
+      approved: { color: 'bg-green-100 text-green-800', text: 'معتمدة', icon: CheckCircle },
       rejected: { color: 'bg-red-100 text-red-800', text: 'مرفوضة', icon: XCircle }
     };
     

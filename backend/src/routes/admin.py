@@ -383,6 +383,124 @@ def update_provider_verification(current_user, provider_id):
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
+# Document Review Endpoints
+@admin_bp.route('/documents', methods=['GET'])
+@admin_required
+def get_pending_documents(current_user):
+    """Get all documents pending review"""
+    try:
+        status = request.args.get('status', 'pending')
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 20, type=int)
+        
+        query = ProviderDocument.query.filter_by(verification_status=status)
+        
+        # Join with provider profile to get provider info
+        query = query.join(ServiceProviderProfile, ProviderDocument.provider_id == ServiceProviderProfile.id)
+        query = query.join(User, ServiceProviderProfile.user_id == User.id)
+        
+        documents = query.order_by(ProviderDocument.created_at.desc()).paginate(
+            page=page,
+            per_page=per_page,
+            error_out=False
+        )
+        
+        document_data = []
+        for doc in documents.items:
+            doc_dict = doc.to_dict()
+            # Add provider info
+            doc_dict['provider'] = {
+                'id': doc.provider.id,
+                'first_name': doc.provider.first_name,
+                'last_name': doc.provider.last_name,
+                'email': doc.provider.user.email,
+                'verification_status': doc.provider.verification_status
+            }
+            document_data.append(doc_dict)
+        
+        return jsonify({
+            'documents': document_data,
+            'pagination': {
+                'page': page,
+                'per_page': per_page,
+                'total': documents.total,
+                'pages': documents.pages,
+                'has_next': documents.has_next,
+                'has_prev': documents.has_prev
+            }
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error in get_pending_documents: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@admin_bp.route('/documents/<document_id>/review', methods=['PUT'])
+@admin_required
+def review_document(current_user, document_id):
+    """Approve or reject a specific document"""
+    try:
+        data = request.get_json()
+        
+        if 'action' not in data or data['action'] not in ['approve', 'reject']:
+            return jsonify({'error': 'Action must be "approve" or "reject"'}), 400
+        
+        document = ProviderDocument.query.get_or_404(document_id)
+        
+        if data['action'] == 'approve':
+            document.verification_status = 'approved'
+            document.verified_by = current_user.id
+            document.verified_at = datetime.utcnow()
+            document.rejection_reason = None
+            message = 'Document approved successfully'
+        else:  # reject
+            document.verification_status = 'rejected'
+            document.verified_by = current_user.id
+            document.verified_at = datetime.utcnow()
+            document.rejection_reason = data.get('reason', 'Document does not meet requirements')
+            message = f'Document rejected: {document.rejection_reason}'
+        
+        db.session.commit()
+        
+        # Check if all required documents are approved for auto-approval
+        provider = document.provider
+        all_docs = ProviderDocument.query.filter_by(provider_id=provider.id).all()
+        
+        required_docs = ['national_id', 'certificate', 'license']  # Define required docs
+        approved_docs = [doc.document_type for doc in all_docs if doc.verification_status == 'approved']
+        
+        # Auto-approve provider if all required documents are approved
+        if all(doc_type in approved_docs for doc_type in required_docs) and provider.verification_status == 'pending':
+            provider.verification_status = 'approved'
+            provider.user.status = 'active'
+            db.session.commit()
+            
+        return jsonify({
+            'message': message,
+            'document': document.to_dict()
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error in review_document: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@admin_bp.route('/providers/<provider_id>/documents', methods=['GET'])
+@admin_required
+def get_provider_documents(current_user, provider_id):
+    """Get all documents for a specific provider"""
+    try:
+        provider = ServiceProviderProfile.query.get_or_404(provider_id)
+        documents = ProviderDocument.query.filter_by(provider_id=provider_id).all()
+        
+        return jsonify({
+            'provider': provider.to_dict(),
+            'documents': [doc.to_dict() for doc in documents]
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error in get_provider_documents: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
 @admin_bp.route('/services/categories', methods=['POST'])
 @admin_required
 def create_service_category(current_user):

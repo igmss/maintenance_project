@@ -113,6 +113,7 @@ const ProviderDashboard = () => {
 
   const getVerificationStatusColor = (status) => {
     switch (status) {
+      case 'approved':
       case 'verified':
         return 'bg-green-100 text-green-800';
       case 'pending':
@@ -126,6 +127,7 @@ const ProviderDashboard = () => {
 
   const getVerificationStatusText = (status) => {
     switch (status) {
+      case 'approved':
       case 'verified':
         return 'معتمد';
       case 'pending':
@@ -246,6 +248,11 @@ const ProviderDashboard = () => {
                     إكمال التحقق
                   </Link>
                 </Button>
+              )}
+              {profile?.verification_status === 'approved' && (
+                <p className="text-sm text-green-600 font-medium">
+                  ✅ تم التحقق من حسابك بنجاح
+                </p>
               )}
             </div>
           </div>

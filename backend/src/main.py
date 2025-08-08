@@ -387,6 +387,13 @@ def create_sample_data():
 # Create Flask app
 app = create_app()
 
+# File serving endpoint for documents
+@app.route('/uploads/documents/<filename>')
+def uploaded_documents(filename):
+    """Serve uploaded document files"""
+    upload_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'uploads', 'documents')
+    return send_from_directory(upload_dir, filename)
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
 
