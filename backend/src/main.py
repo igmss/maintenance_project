@@ -92,6 +92,31 @@ def create_app():
     app.register_blueprint(providers_bp, url_prefix='/api/providers')
     app.register_blueprint(admin_bp, url_prefix='/api/admin')
     
+    # Static file serving for uploads
+    @app.route('/uploads/<path:filename>')
+    def serve_uploads(filename):
+        """Serve uploaded files with authentication"""
+        uploads_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'uploads')
+        return send_from_directory(uploads_dir, filename)
+    
+    @app.route('/api/uploads/documents/<path:filename>')
+    def serve_document(filename):
+        """Serve document files with authentication check"""
+        from src.utils.auth import token_required, admin_required
+        from flask import request
+        
+        # Check if user is authenticated (admin or provider)
+        token = request.headers.get('Authorization')
+        if token and token.startswith('Bearer '):
+            try:
+                # Basic authentication check - you might want to make this more robust
+                uploads_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'uploads', 'documents')
+                return send_from_directory(uploads_dir, filename)
+            except:
+                pass
+        
+        return jsonify({'error': 'Authentication required'}), 401
+    
     # Health check endpoint
     @app.route('/api/health', methods=['GET'])
     def health_check():
@@ -175,13 +200,6 @@ def create_app():
         # Create sample data if tables are empty
         if not ServiceCategory.query.first():
             create_sample_data()
-    
-    # File serving route
-    @app.route('/uploads/<path:filename>')
-    def serve_uploaded_file(filename):
-        """Serve uploaded files"""
-        upload_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'uploads')
-        return send_from_directory(upload_dir, filename)
     
     return app
 

@@ -431,7 +431,7 @@ def get_pending_documents(current_user):
         }), 200
         
     except Exception as e:
-        logger.error(f"Error in get_pending_documents: {str(e)}")
+        print(f"Error in get_pending_documents: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @admin_bp.route('/documents/<document_id>/review', methods=['PUT'])
@@ -481,7 +481,7 @@ def review_document(current_user, document_id):
         
     except Exception as e:
         db.session.rollback()
-        logger.error(f"Error in review_document: {str(e)}")
+        print(f"Error in review_document: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @admin_bp.route('/providers/<provider_id>/documents', methods=['GET'])
@@ -498,7 +498,7 @@ def get_provider_documents(current_user, provider_id):
         }), 200
         
     except Exception as e:
-        logger.error(f"Error in get_provider_documents: {str(e)}")
+        print(f"Error in get_provider_documents: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @admin_bp.route('/services/categories', methods=['POST'])
