@@ -143,7 +143,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     loadDashboardData();
-  }, [timeRange]);
+  }, []);
 
   if (loading) {
     return (
