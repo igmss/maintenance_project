@@ -253,6 +253,42 @@ class ApiClient {
     });
   }
 
+  async getProviders(params = {}) {
+    const queryString = new URLSearchParams(params).toString();
+    return this.request(`/admin/providers${queryString ? `?${queryString}` : ''}`);
+  }
+
+  async updateProviderVerification(providerId, data) {
+    return this.request(`/admin/providers/${providerId}/verification`, {
+      method: 'PUT',
+      body: data,
+    });
+  }
+
+  async getAdminServices(params = {}) {
+    const queryString = new URLSearchParams(params).toString();
+    return this.request(`/admin/services${queryString ? `?${queryString}` : ''}`);
+  }
+
+  async createAdminService(data) {
+    return this.request('/admin/services', {
+      method: 'POST',
+      body: data,
+    });
+  }
+
+  async updateAdminService(id, data) {
+    return this.request(`/admin/services/${id}`, {
+      method: 'PUT',
+      body: data,
+    });
+  }
+
+  async getAnalytics(params = {}) {
+    const queryString = new URLSearchParams(params).toString();
+    return this.request(`/admin/analytics${queryString ? `?${queryString}` : ''}`);
+  }
+
   async getAllBookings(params = {}) {
     const queryString = new URLSearchParams(params).toString();
     return this.request(`/admin/bookings${queryString ? `?${queryString}` : ''}`);

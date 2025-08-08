@@ -62,7 +62,7 @@ const AddServicePage = () => {
       
       // Check verification status
       const profile = providerResponse.profile;
-      if (profile?.verification_status !== 'verified') {
+      if (profile?.verification_status !== 'approved') {
         alert('يجب التحقق من حسابك أولاً قبل إضافة الخدمات. سيتم توجيهك إلى صفحة التحقق.');
         navigate('/verification');
         return;

@@ -232,14 +232,14 @@ const ProviderDashboard = () => {
                 <Badge className={getVerificationStatusColor(profile?.verification_status)}>
                   {getVerificationStatusText(profile?.verification_status)}
                 </Badge>
-                {profile?.verification_status === 'verified' && (
+                {profile?.verification_status === 'approved' && (
                   <CheckCircle className="h-4 w-4 text-green-600" />
                 )}
                 {profile?.verification_status === 'pending' && (
                   <AlertCircle className="h-4 w-4 text-yellow-600" />
                 )}
               </div>
-              {profile?.verification_status !== 'verified' && (
+              {profile?.verification_status !== 'approved' && (
                 <Button variant="outline" size="sm" asChild>
                   <Link to="/verification">
                     <FileText className="mr-2 h-4 w-4" />
@@ -433,7 +433,7 @@ const ProviderDashboard = () => {
                   </Link>
                 </Button>
                 
-                {profile?.verification_status !== 'verified' && (
+                {profile?.verification_status !== 'approved' && (
                   <Button variant="outline" className="w-full" asChild>
                     <Link to="/verification">
                       <FileText className="mr-2 h-4 w-4" />
