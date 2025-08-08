@@ -28,6 +28,7 @@ import {
   Mail,
   Calendar,
   Wrench,
+  ExternalLink,
 } from 'lucide-react';
 
 import { apiClient } from '../lib/api';
@@ -37,9 +38,12 @@ const ProviderManagement = () => {
   const [providers, setProviders] = useState([]);
   const [selectedProvider, setSelectedProvider] = useState(null);
   const [showVerificationDialog, setShowVerificationDialog] = useState(false);
+  const [showDocumentsDialog, setShowDocumentsDialog] = useState(false);
+  const [providerDocuments, setProviderDocuments] = useState([]);
   const [verificationAction, setVerificationAction] = useState('');
   const [verificationNotes, setVerificationNotes] = useState('');
   const [loading, setLoading] = useState(true);
+  const [documentsLoading, setDocumentsLoading] = useState(false);
   const [error, setError] = useState(null);
 
   // Load providers data
@@ -57,7 +61,7 @@ const ProviderManagement = () => {
       // Ensure each provider has required properties with defaults
       const processedProviders = (response.providers || []).map(provider => ({
         ...provider,
-        documents: provider.documents || {},
+        documents: provider.documents || [],
         services: provider.services || [],
         first_name: provider.first_name || '',
         last_name: provider.last_name || '',
@@ -72,6 +76,56 @@ const ProviderManagement = () => {
       setProviders([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadProviderDocuments = async (providerId) => {
+    try {
+      setDocumentsLoading(true);
+      const response = await apiClient.getProviderDocuments(providerId);
+      setProviderDocuments(response.documents || []);
+    } catch (error) {
+      console.error('Failed to load provider documents:', error);
+      setProviderDocuments([]);
+    } finally {
+      setDocumentsLoading(false);
+    }
+  };
+
+  const viewProviderDocuments = async (provider) => {
+    setSelectedProvider(provider);
+    setShowDocumentsDialog(true);
+    await loadProviderDocuments(provider.id);
+  };
+
+  const downloadDocument = async (documentUrl) => {
+    try {
+      // Create full URL for document
+      const fullUrl = documentUrl.startsWith('/uploads') 
+        ? `${apiClient.baseURL.replace('/api', '')}${documentUrl}`
+        : documentUrl;
+      
+      // Open in new tab
+      window.open(fullUrl, '_blank');
+    } catch (error) {
+      console.error('Failed to download document:', error);
+    }
+  };
+
+  const reviewDocument = async (documentId, action) => {
+    try {
+      await apiClient.reviewDocument(documentId, action);
+      
+      // Reload documents for the current provider
+      if (selectedProvider) {
+        await loadProviderDocuments(selectedProvider.id);
+      }
+      
+      // Also reload providers to update the main list
+      await loadProviders();
+    } catch (error) {
+      console.error('Failed to review document:', error);
+      setError('Failed to review document');
     }
   };
 
@@ -109,8 +163,9 @@ const ProviderManagement = () => {
   };
 
   const getDocumentStatus = (doc) => {
-    if (!doc.uploaded) return { status: 'missing', color: 'text-red-500', icon: XCircle };
-    if (doc.verified) return { status: 'verified', color: 'text-green-500', icon: CheckCircle };
+    if (!doc || !doc.document_url) return { status: 'missing', color: 'text-red-500', icon: XCircle };
+    if (doc.verification_status === 'approved') return { status: 'verified', color: 'text-green-500', icon: CheckCircle };
+    if (doc.verification_status === 'rejected') return { status: 'rejected', color: 'text-red-500', icon: XCircle };
     return { status: 'pending', color: 'text-yellow-500', icon: Clock };
   };
 
@@ -120,22 +175,27 @@ const ProviderManagement = () => {
     setShowVerificationDialog(true);
   };
 
-  const submitVerification = () => {
+  const submitVerification = async () => {
     if (!selectedProvider) return;
 
-    setProviders(providers.map(p => 
-      p.id === selectedProvider.id 
-        ? { 
-            ...p, 
-            verification_status: verificationAction,
-            ...(verificationAction === 'rejected' && { rejection_reason: verificationNotes })
-          }
-        : p
-    ));
-
-    setShowVerificationDialog(false);
-    setVerificationNotes('');
-    setSelectedProvider(null);
+    try {
+      await apiClient.updateProviderVerificationStatus(selectedProvider.id, verificationAction, verificationNotes);
+      setProviders(providers.map(p => 
+        p.id === selectedProvider.id 
+          ? { 
+              ...p, 
+              verification_status: verificationAction,
+              ...(verificationAction === 'rejected' && { rejection_reason: verificationNotes })
+            }
+          : p
+      ));
+      setShowVerificationDialog(false);
+      setVerificationNotes('');
+      setSelectedProvider(null);
+    } catch (error) {
+      console.error('Failed to submit verification:', error);
+      setError('Failed to update verification status');
+    }
   };
 
   const pendingProviders = providers.filter(p => p.verification_status === 'pending');
@@ -201,23 +261,37 @@ const ProviderManagement = () => {
               </div>
 
               {/* Document Status */}
-              <div className="grid grid-cols-3 gap-4 text-xs">
-                {provider.documents && Object.entries(provider.documents).map(([docType, doc]) => {
-                  const status = getDocumentStatus(doc);
-                  const Icon = status.icon;
-                  return (
-                    <div key={docType} className="flex items-center">
-                      <Icon className={`mr-1 h-3 w-3 ${status.color}`} />
-                      <span className="capitalize">
-                        {docType === 'criminalRecord' ? 'Criminal Record' : docType}
-                      </span>
+              <div className="flex items-center justify-between mb-3">
+                <div className="grid grid-cols-3 gap-4 text-xs flex-1">
+                  {provider.documents && provider.documents.length > 0 ? (
+                    provider.documents.map((doc, index) => {
+                      const status = getDocumentStatus(doc);
+                      const Icon = status.icon;
+                      return (
+                        <div key={index} className="flex items-center">
+                          <Icon className={`mr-1 h-3 w-3 ${status.color}`} />
+                          <span className="capitalize">
+                            {doc.document_type === 'background_check' ? 'Background Check' : doc.document_type}
+                          </span>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="col-span-3 text-muted-foreground">
+                      No documents uploaded
                     </div>
-                  );
-                })}
-                {(!provider.documents || Object.keys(provider.documents).length === 0) && (
-                  <div className="col-span-3 text-muted-foreground">
-                    No documents uploaded
-                  </div>
+                  )}
+                </div>
+                {provider.documents && provider.documents.length > 0 && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => viewProviderDocuments(provider)}
+                    className="ml-4"
+                  >
+                    <Eye className="mr-1 h-3 w-3" />
+                    View Docs
+                  </Button>
                 )}
               </div>
 
@@ -484,6 +558,89 @@ const ProviderManagement = () => {
               disabled={verificationAction === 'rejected' && !verificationNotes.trim()}
             >
               {verificationAction === 'approved' ? 'Approve Provider' : 'Reject Application'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Documents Dialog */}
+      <Dialog open={showDocumentsDialog} onOpenChange={setShowDocumentsDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {selectedProvider ? `${selectedProvider.first_name} ${selectedProvider.last_name}'s Documents` : 'Provider Documents'}
+            </DialogTitle>
+            <DialogDescription>
+              View and download documents for this provider.
+            </DialogDescription>
+          </DialogHeader>
+                     <div className="space-y-4">
+             {documentsLoading ? (
+               <div className="text-center py-8">
+                 <p className="text-muted-foreground">Loading documents...</p>
+               </div>
+             ) : providerDocuments.length === 0 ? (
+               <div className="text-center py-8">
+                 <FileText className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                 <p className="text-muted-foreground">No documents uploaded for this provider.</p>
+               </div>
+             ) : (
+               <div className="space-y-4">
+                 {providerDocuments.map((doc, index) => {
+                   const status = getDocumentStatus(doc);
+                   const StatusIcon = status.icon;
+                   return (
+                     <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                       <div className="flex items-center">
+                         <FileText className="mr-2 h-5 w-5 text-blue-500" />
+                         <div>
+                           <span className="font-medium capitalize">
+                             {doc.document_type === 'background_check' ? 'Background Check' : doc.document_type}
+                           </span>
+                           <div className="flex items-center mt-1">
+                             <StatusIcon className={`mr-1 h-3 w-3 ${status.color}`} />
+                             <span className="text-sm text-muted-foreground capitalize">{doc.verification_status}</span>
+                           </div>
+                         </div>
+                       </div>
+                       <div className="flex items-center space-x-2">
+                         <Button
+                           size="sm"
+                           variant="outline"
+                           onClick={() => downloadDocument(doc.document_url)}
+                           disabled={!doc.document_url}
+                         >
+                           <Download className="mr-1 h-4 w-4" />
+                           View
+                         </Button>
+                         {doc.verification_status === 'pending' && (
+                           <div className="flex space-x-1">
+                             <Button
+                               size="sm"
+                               onClick={() => reviewDocument(doc.id, 'approve')}
+                               className="bg-green-600 hover:bg-green-700"
+                             >
+                               <CheckCircle className="h-4 w-4" />
+                             </Button>
+                             <Button
+                               size="sm"
+                               variant="destructive"
+                               onClick={() => reviewDocument(doc.id, 'reject')}
+                             >
+                               <XCircle className="h-4 w-4" />
+                             </Button>
+                           </div>
+                         )}
+                       </div>
+                     </div>
+                   );
+                 })}
+               </div>
+             )}
+           </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDocumentsDialog(false)}>
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>
