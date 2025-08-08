@@ -30,6 +30,7 @@ import {
   Search,
   Wrench,
   Shield,
+  FileText
 } from 'lucide-react';
 
 const navigation = [
