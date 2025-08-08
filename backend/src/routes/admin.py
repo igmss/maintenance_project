@@ -364,6 +364,36 @@ def update_service_category(current_user, category_id):
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
+@admin_bp.route('/services', methods=['GET'])
+@admin_required
+def get_all_services(current_user):
+    """Get all services for admin panel"""
+    try:
+        language = request.args.get('lang', 'en')
+        category_id = request.args.get('category_id')
+        
+        query = Service.query
+        
+        # Filter by category if specified
+        if category_id:
+            query = query.filter_by(category_id=category_id)
+        
+        # Join with category to get category info
+        services = query.join(ServiceCategory).order_by(ServiceCategory.name_ar, Service.name_ar).all()
+        
+        services_data = []
+        for service in services:
+            service_dict = service.to_dict(language)
+            service_dict['category'] = service.category.to_dict(language)
+            services_data.append(service_dict)
+        
+        return jsonify({
+            'services': services_data
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @admin_bp.route('/services', methods=['POST'])
 @admin_required
 def create_service(current_user):
@@ -403,6 +433,86 @@ def create_service(current_user):
         
     except Exception as e:
         db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@admin_bp.route('/services/<service_id>', methods=['PUT'])
+@admin_required
+def update_service(current_user, service_id):
+    """Update an existing service"""
+    try:
+        data = request.get_json()
+        service = Service.query.get_or_404(service_id)
+        
+        # Update fields if provided
+        if 'category_id' in data:
+            # Validate category exists
+            category = ServiceCategory.query.get_or_404(data['category_id'])
+            service.category_id = data['category_id']
+        
+        if 'name_ar' in data:
+            service.name_ar = data['name_ar']
+        if 'name_en' in data:
+            service.name_en = data['name_en']
+        if 'description_ar' in data:
+            service.description_ar = data['description_ar']
+        if 'description_en' in data:
+            service.description_en = data['description_en']
+        if 'base_price' in data:
+            service.base_price = data['base_price']
+        if 'price_unit' in data:
+            service.price_unit = data['price_unit']
+        if 'estimated_duration' in data:
+            service.estimated_duration = data['estimated_duration']
+        if 'is_emergency_service' in data:
+            service.is_emergency_service = data['is_emergency_service']
+        if 'emergency_surcharge_percentage' in data:
+            service.emergency_surcharge_percentage = data['emergency_surcharge_percentage']
+        if 'is_active' in data:
+            service.is_active = data['is_active']
+        
+        db.session.commit()
+        
+        return jsonify({
+            'message': 'Service updated successfully',
+            'service': service.to_dict()
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@admin_bp.route('/services/<service_id>', methods=['DELETE'])
+@admin_required
+def delete_service(current_user, service_id):
+    """Delete a service (soft delete by setting is_active=False)"""
+    try:
+        service = Service.query.get_or_404(service_id)
+        
+        # Soft delete by setting is_active to False
+        service.is_active = False
+        db.session.commit()
+        
+        return jsonify({
+            'message': 'Service deleted successfully'
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@admin_bp.route('/services/categories', methods=['GET'])
+@admin_required
+def get_all_service_categories(current_user):
+    """Get all service categories for admin panel"""
+    try:
+        language = request.args.get('lang', 'en')
+        categories = ServiceCategory.query.order_by(ServiceCategory.sort_order).all()
+        
+        return jsonify({
+            'categories': [category.to_dict(language) for category in categories]
+        }), 200
+        
+    except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 @admin_bp.route('/analytics/revenue', methods=['GET'])

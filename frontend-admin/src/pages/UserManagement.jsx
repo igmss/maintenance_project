@@ -51,72 +51,47 @@ import {
   MapPin,
 } from 'lucide-react';
 
-// Mock data - replace with real API calls
-const mockUsers = [
-  {
-    id: 1,
-    name: 'Ahmed Hassan',
-    email: 'ahmed.hassan@email.com',
-    phone: '+20 100 123 4567',
-    role: 'customer',
-    status: 'active',
-    joinDate: '2024-01-15',
-    location: 'Cairo, Egypt',
-    totalBookings: 12,
-    avatar: null,
-  },
-  {
-    id: 2,
-    name: 'Fatima Omar',
-    email: 'fatima.omar@email.com',
-    phone: '+20 101 234 5678',
-    role: 'customer',
-    status: 'active',
-    joinDate: '2024-02-20',
-    location: 'Alexandria, Egypt',
-    totalBookings: 8,
-    avatar: null,
-  },
-  {
-    id: 3,
-    name: 'Mohamed Ali',
-    email: 'mohamed.ali@email.com',
-    phone: '+20 102 345 6789',
-    role: 'provider',
-    status: 'verified',
-    joinDate: '2024-01-10',
-    location: 'Giza, Egypt',
-    totalBookings: 45,
-    avatar: null,
-  },
-  {
-    id: 4,
-    name: 'Sara Mohamed',
-    email: 'sara.mohamed@email.com',
-    phone: '+20 103 456 7890',
-    role: 'customer',
-    status: 'suspended',
-    joinDate: '2024-03-05',
-    location: 'Cairo, Egypt',
-    totalBookings: 3,
-    avatar: null,
-  },
-];
+import { apiClient } from '../lib/api';
 
 const UserManagement = () => {
-  const [users, setUsers] = useState(mockUsers);
-  const [loading, setLoading] = useState(false);
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRole, setFilterRole] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
   const [selectedUser, setSelectedUser] = useState(null);
   const [showUserDialog, setShowUserDialog] = useState(false);
 
+  // Load users data
+  useEffect(() => {
+    loadUsers();
+  }, []);
+
+  const loadUsers = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // For now, we don't have a real users endpoint yet
+      // In production, this would call: await apiClient.getUsers();
+      setUsers([]);
+      
+    } catch (error) {
+      console.error('Failed to load users:', error);
+      setError('Failed to load users');
+      setUsers([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const filteredUsers = users.filter(user => {
-    const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.phone.includes(searchTerm);
-    const matchesRole = filterRole === 'all' || user.role === filterRole;
+    const name = `${user.first_name || ''} ${user.last_name || ''}`.trim();
+    const matchesSearch = name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (user.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (user.phone || '').includes(searchTerm);
+    const matchesRole = filterRole === 'all' || user.user_type === filterRole;
     const matchesStatus = filterStatus === 'all' || user.status === filterStatus;
     
     return matchesSearch && matchesRole && matchesStatus;
@@ -138,6 +113,7 @@ const UserManagement = () => {
   const getRoleBadge = (role) => {
     const roleConfig = {
       customer: { label: 'Customer', variant: 'outline' },
+      service_provider: { label: 'Provider', variant: 'secondary' },
       provider: { label: 'Provider', variant: 'secondary' },
       admin: { label: 'Admin', variant: 'default' },
     };
@@ -157,14 +133,15 @@ const UserManagement = () => {
   };
 
   const handleDeleteUser = (user) => {
-    // Implement delete functionality
-    if (window.confirm(`Are you sure you want to delete ${user.name}?`)) {
+    // In production, this would call the API to delete user
+    const userName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'this user';
+    if (window.confirm(`Are you sure you want to delete ${userName}?`)) {
       setUsers(users.filter(u => u.id !== user.id));
     }
   };
 
   const handleSuspendUser = (user) => {
-    // Implement suspend functionality
+    // In production, this would call the API to suspend/activate user
     setUsers(users.map(u => 
       u.id === user.id 
         ? { ...u, status: u.status === 'suspended' ? 'active' : 'suspended' }
@@ -203,7 +180,7 @@ const UserManagement = () => {
           <CardContent>
             <div className="text-2xl font-bold">{users.length}</div>
             <p className="text-xs text-muted-foreground">
-              +12% from last month
+              Total registered users
             </p>
           </CardContent>
         </Card>
@@ -213,7 +190,7 @@ const UserManagement = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {users.filter(u => u.role === 'customer').length}
+              {users.filter(u => u.user_type === 'customer').length}
             </div>
             <p className="text-xs text-muted-foreground">
               Active customers
@@ -226,7 +203,7 @@ const UserManagement = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {users.filter(u => u.role === 'provider').length}
+              {users.filter(u => u.user_type === 'service_provider').length}
             </div>
             <p className="text-xs text-muted-foreground">
               Service providers
@@ -275,7 +252,7 @@ const UserManagement = () => {
                 <SelectContent>
                   <SelectItem value="all">All Roles</SelectItem>
                   <SelectItem value="customer">Customer</SelectItem>
-                  <SelectItem value="provider">Provider</SelectItem>
+                  <SelectItem value="service_provider">Provider</SelectItem>
                   <SelectItem value="admin">Admin</SelectItem>
                 </SelectContent>
               </Select>
@@ -299,94 +276,116 @@ const UserManagement = () => {
           </div>
 
           {/* Users Table */}
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>User</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Location</TableHead>
-                  <TableHead>Bookings</TableHead>
-                  <TableHead>Join Date</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredUsers.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell>
-                      <div className="flex items-center space-x-3">
-                        <Avatar className="h-8 w-8">
-                          <AvatarImage src={user.avatar} alt={user.name} />
-                          <AvatarFallback>
-                            {user.name.split(' ').map(n => n[0]).join('')}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <div className="font-medium">{user.name}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {user.email}
-                          </div>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>{getRoleBadge(user.role)}</TableCell>
-                    <TableCell>{getStatusBadge(user.status)}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center text-sm text-muted-foreground">
-                        <MapPin className="mr-1 h-3 w-3" />
-                        {user.location}
-                      </div>
-                    </TableCell>
-                    <TableCell>{user.totalBookings}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center text-sm text-muted-foreground">
-                        <Calendar className="mr-1 h-3 w-3" />
-                        {user.joinDate}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuItem onClick={() => handleViewUser(user)}>
-                            <Eye className="mr-2 h-4 w-4" />
-                            View Details
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleEditUser(user)}>
-                            <Edit className="mr-2 h-4 w-4" />
-                            Edit User
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => handleSuspendUser(user)}>
-                            {user.status === 'suspended' ? 'Activate' : 'Suspend'}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            onClick={() => handleDeleteUser(user)}
-                            className="text-destructive"
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete User
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-
-          {filteredUsers.length === 0 && (
+          {loading ? (
             <div className="text-center py-8">
-              <p className="text-muted-foreground">No users found matching your criteria.</p>
+              <p className="text-muted-foreground">Loading users...</p>
             </div>
+          ) : error ? (
+            <div className="text-center py-8">
+              <p className="text-red-600">{error}</p>
+              <Button onClick={loadUsers} className="mt-2">Try Again</Button>
+            </div>
+          ) : users.length === 0 ? (
+            <div className="text-center py-8">
+              <UserPlus className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+              <p className="text-muted-foreground">No users found</p>
+              <p className="text-sm text-muted-foreground">Users will appear here when they register</p>
+            </div>
+          ) : (
+            <>
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>User</TableHead>
+                      <TableHead>Role</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Phone</TableHead>
+                      <TableHead>Join Date</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredUsers.map((user) => {
+                      const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim();
+                      const initials = user.first_name && user.last_name 
+                        ? `${user.first_name[0]}${user.last_name[0]}` 
+                        : 'U';
+                      
+                      return (
+                        <TableRow key={user.id}>
+                          <TableCell>
+                            <div className="flex items-center space-x-3">
+                              <Avatar className="h-8 w-8">
+                                <AvatarImage src={user.avatar} alt={fullName} />
+                                <AvatarFallback>{initials}</AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <div className="font-medium">{fullName || 'N/A'}</div>
+                                <div className="text-sm text-muted-foreground">
+                                  {user.email || 'N/A'}
+                                </div>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>{getRoleBadge(user.user_type)}</TableCell>
+                          <TableCell>{getStatusBadge(user.status || 'active')}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center text-sm text-muted-foreground">
+                              <Phone className="mr-1 h-3 w-3" />
+                              {user.phone || 'N/A'}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center text-sm text-muted-foreground">
+                              <Calendar className="mr-1 h-3 w-3" />
+                              {user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A'}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" className="h-8 w-8 p-0">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                <DropdownMenuItem onClick={() => handleViewUser(user)}>
+                                  <Eye className="mr-2 h-4 w-4" />
+                                  View Details
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleEditUser(user)}>
+                                  <Edit className="mr-2 h-4 w-4" />
+                                  Edit User
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => handleSuspendUser(user)}>
+                                  {user.status === 'suspended' ? 'Activate' : 'Suspend'}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem 
+                                  onClick={() => handleDeleteUser(user)}
+                                  className="text-destructive"
+                                >
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  Delete User
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {filteredUsers.length === 0 && (
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground">No users found matching your criteria.</p>
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
@@ -404,16 +403,21 @@ const UserManagement = () => {
             <div className="space-y-6">
               <div className="flex items-center space-x-4">
                 <Avatar className="h-16 w-16">
-                  <AvatarImage src={selectedUser.avatar} alt={selectedUser.name} />
+                  <AvatarImage src={selectedUser.avatar} alt={`${selectedUser.first_name} ${selectedUser.last_name}`} />
                   <AvatarFallback className="text-lg">
-                    {selectedUser.name.split(' ').map(n => n[0]).join('')}
+                    {selectedUser.first_name && selectedUser.last_name 
+                      ? `${selectedUser.first_name[0]}${selectedUser.last_name[0]}` 
+                      : 'U'
+                    }
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <h3 className="text-xl font-semibold">{selectedUser.name}</h3>
+                  <h3 className="text-xl font-semibold">
+                    {`${selectedUser.first_name || ''} ${selectedUser.last_name || ''}`.trim() || 'N/A'}
+                  </h3>
                   <div className="flex items-center space-x-2 mt-1">
-                    {getRoleBadge(selectedUser.role)}
-                    {getStatusBadge(selectedUser.status)}
+                    {getRoleBadge(selectedUser.user_type)}
+                    {getStatusBadge(selectedUser.status || 'active')}
                   </div>
                 </div>
               </div>
@@ -424,15 +428,11 @@ const UserManagement = () => {
                   <div className="space-y-1 text-sm">
                     <div className="flex items-center">
                       <Mail className="mr-2 h-4 w-4 text-muted-foreground" />
-                      {selectedUser.email}
+                      {selectedUser.email || 'N/A'}
                     </div>
                     <div className="flex items-center">
                       <Phone className="mr-2 h-4 w-4 text-muted-foreground" />
-                      {selectedUser.phone}
-                    </div>
-                    <div className="flex items-center">
-                      <MapPin className="mr-2 h-4 w-4 text-muted-foreground" />
-                      {selectedUser.location}
+                      {selectedUser.phone || 'N/A'}
                     </div>
                   </div>
                 </div>
@@ -442,10 +442,10 @@ const UserManagement = () => {
                   <div className="space-y-1 text-sm">
                     <div className="flex items-center">
                       <Calendar className="mr-2 h-4 w-4 text-muted-foreground" />
-                      Joined: {selectedUser.joinDate}
+                      Joined: {selectedUser.created_at ? new Date(selectedUser.created_at).toLocaleDateString() : 'N/A'}
                     </div>
                     <div>
-                      Total Bookings: {selectedUser.totalBookings}
+                      Status: {selectedUser.status || 'active'}
                     </div>
                   </div>
                 </div>

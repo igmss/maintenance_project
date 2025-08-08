@@ -142,6 +142,11 @@ class ApiClient {
     return this.request(`/admin/services${queryString ? `?${queryString}` : ''}`);
   }
 
+  async getServiceCategories(params = {}) {
+    const queryString = new URLSearchParams(params).toString();
+    return this.request(`/admin/services/categories${queryString ? `?${queryString}` : ''}`);
+  }
+
   async createService(data) {
     return this.request('/admin/services', {
       method: 'POST',

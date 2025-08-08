@@ -57,6 +57,7 @@ import { useEffect } from 'react';
 
 const ServiceManagement = () => {
   const [services, setServices] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
@@ -74,19 +75,28 @@ const ServiceManagement = () => {
     isActive: true,
   });
 
-  // Load services data
+  // Load services data and categories
   useEffect(() => {
     loadServices();
+    loadCategories();
   }, []);
+
+  const loadCategories = async () => {
+    try {
+      const response = await apiClient.getServiceCategories();
+      setCategories(response.categories || []);
+    } catch (error) {
+      console.error('Failed to load categories:', error);
+    }
+  };
 
   const loadServices = async () => {
     try {
       setLoading(true);
       setError(null);
       
-      // For now, we don't have a real services endpoint yet
-      // In production, this would call: await apiClient.getServices();
-      setServices([]);
+      const response = await apiClient.getServices();
+      setServices(response.services || []);
       
     } catch (error) {
       console.error('Failed to load services:', error);
@@ -97,26 +107,43 @@ const ServiceManagement = () => {
     }
   };
 
-  const filteredServices = services.filter(service =>
-    (service.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (service.name_ar || service.nameAr || '').includes(searchTerm) ||
-    (service.description || '').toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredServices = services.filter(service => {
+    const matchesSearch = (service.name_ar && service.name_ar.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                         (service.name_en && service.name_en.toLowerCase().includes(searchTerm.toLowerCase()));
+    return matchesSearch;
+  });
 
-  const handleAddService = () => {
-    const service = {
-      id: Date.now(),
-      ...newService,
-      basePrice: parseFloat(newService.basePrice),
-      emergencyPrice: parseFloat(newService.emergencyPrice),
-      averageRating: 0,
-      totalProviders: 0,
-      totalBookings: 0,
-      monthlyRevenue: 0,
-      createdAt: new Date().toISOString().split('T')[0],
-    };
-    
-    setServices([...services, service]);
+  const handleAddService = async () => {
+    try {
+      setLoading(true);
+      
+      const serviceData = {
+        category_id: newService.category,
+        name_ar: newService.nameAr,
+        name_en: newService.name,
+        description_ar: newService.descriptionAr,
+        description_en: newService.description,
+        base_price: parseFloat(newService.basePrice),
+        is_emergency_service: !!newService.emergencyPrice,
+        emergency_surcharge_percentage: newService.emergencyPrice ? 
+          ((parseFloat(newService.emergencyPrice) - parseFloat(newService.basePrice)) / parseFloat(newService.basePrice)) * 100 : 0,
+        is_active: newService.isActive,
+      };
+      
+      await apiClient.createService(serviceData);
+      await loadServices(); // Reload services
+      setShowAddDialog(false);
+      resetForm();
+      
+    } catch (error) {
+      console.error('Failed to create service:', error);
+      setError('Failed to create service');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const resetForm = () => {
     setNewService({
       name: '',
       nameAr: '',
@@ -124,10 +151,9 @@ const ServiceManagement = () => {
       descriptionAr: '',
       basePrice: '',
       emergencyPrice: '',
-      category: 'maintenance',
+      category: categories.length > 0 ? categories[0].id : '',
       isActive: true,
     });
-    setShowAddDialog(false);
   };
 
   const handleEditService = (service) => {
@@ -441,17 +467,17 @@ const ServiceManagement = () => {
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline" className="capitalize">
-                            {service.category || 'N/A'}
+                            {service.category?.name_ar || 'N/A'}
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <Badge variant={(service.is_active !== undefined ? service.is_active : service.isActive) ? 'default' : 'secondary'}>
-                            {(service.is_active !== undefined ? service.is_active : service.isActive) ? 'Active' : 'Inactive'}
+                          <Badge variant={service.is_active ? 'default' : 'secondary'}>
+                            {service.is_active ? 'Active' : 'Inactive'}
                           </Badge>
                         </TableCell>
                         <TableCell>
                           <div className="text-sm">
-                            <div>Base: {service.base_price || service.basePrice || 0} EGP</div>
+                            <div>Base: {service.base_price || 0} EGP</div>
                             <div className="text-muted-foreground">
                               Emergency: {service.emergency_price || service.emergencyPrice || 0} EGP
                             </div>
