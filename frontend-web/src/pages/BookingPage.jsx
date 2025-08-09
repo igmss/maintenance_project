@@ -84,7 +84,7 @@ const BookingPage = () => {
       // First, check if serviceId is a service or category
       // Try to get it as a service first
       try {
-        const serviceResponse = await apiClient.request(`/services/${serviceId}`);
+        const serviceResponse = await apiClient.getService(serviceId, 'ar');
         setService(serviceResponse);
         await searchProviders();
         return;
