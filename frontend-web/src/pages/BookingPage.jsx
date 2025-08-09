@@ -177,12 +177,18 @@ const BookingPage = () => {
       const bookingPayload = {
         service_id: service.id,
         provider_id: selectedProvider.id,
-        scheduled_date: `${format(selectedDate, 'yyyy-MM-dd')} ${selectedTime}:00`,
-        description: bookingData.description,
-        customer_address: bookingData.address,
-        customer_phone: bookingData.phone,
-        is_emergency: bookingData.emergency,
-        total_amount: calculateTotalPrice()
+        scheduled_date: `${format(selectedDate, 'yyyy-MM-dd')}T${selectedTime}:00`,
+        special_instructions: bookingData.description,
+        service_address: {
+          street: bookingData.address,
+          city: userLocation?.city || 'القاهرة',
+          governorate: userLocation?.governorate || 'القاهرة',
+          latitude: userLocation?.latitude || 30.0444,
+          longitude: userLocation?.longitude || 31.2357,
+          formatted_address: bookingData.address,
+          phone: bookingData.phone
+        },
+        is_emergency: bookingData.emergency
       };
 
       const response = await apiClient.createBooking(bookingPayload);
