@@ -1,5 +1,7 @@
 from src.models import db, generate_uuid
 from datetime import datetime
+from sqlalchemy.dialects.postgresql import UUID
+import uuid
 
 class ProviderLocation(db.Model):
     """Real-time service provider location tracking"""
@@ -151,8 +153,8 @@ class CustomerLocation(db.Model):
     """Customer live location tracking for better service matching"""
     __tablename__ = 'customer_locations'
     
-    id = db.Column(db.String(36), primary_key=True, default=generate_uuid)
-    customer_id = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=False)
+    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    customer_id = db.Column(UUID(as_uuid=True), db.ForeignKey('users.id'), nullable=False)
     latitude = db.Column(db.Numeric(10, 8), nullable=False)
     longitude = db.Column(db.Numeric(11, 8), nullable=False)
     accuracy = db.Column(db.Numeric(6, 2))  # GPS accuracy in meters
