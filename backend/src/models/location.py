@@ -6,7 +6,7 @@ class ProviderLocation(db.Model):
     __tablename__ = 'provider_locations'
     
     id = db.Column(db.String(36), primary_key=True, default=generate_uuid)
-    provider_id = db.Column(db.String(36), db.ForeignKey('service_provider_profiles.id'), nullable=False)
+    provider_id = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=False)
     latitude = db.Column(db.Numeric(10, 8), nullable=False)
     longitude = db.Column(db.Numeric(11, 8), nullable=False)
     accuracy = db.Column(db.Numeric(6, 2))  # GPS accuracy in meters
@@ -66,7 +66,7 @@ class BookingLocation(db.Model):
     
     id = db.Column(db.String(36), primary_key=True, default=generate_uuid)
     booking_id = db.Column(db.String(36), db.ForeignKey('bookings.id'), nullable=False)
-    provider_id = db.Column(db.String(36), db.ForeignKey('service_provider_profiles.id'), nullable=False)
+    provider_id = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=False)
     latitude = db.Column(db.Numeric(10, 8), nullable=False)
     longitude = db.Column(db.Numeric(11, 8), nullable=False)
     accuracy = db.Column(db.Numeric(6, 2))

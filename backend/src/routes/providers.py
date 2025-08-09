@@ -157,7 +157,7 @@ def update_location(current_user):
         
         # Create new location entry with online status
         location = ProviderLocation(
-            provider_id=current_user.provider_profile.id,
+            provider_id=current_user.id,
             latitude=latitude,
             longitude=longitude,
             accuracy=data.get('accuracy'),
@@ -212,7 +212,7 @@ def toggle_online_status(current_user):
         
         # Update all existing locations for this provider to offline first
         ProviderLocation.query.filter_by(
-            provider_id=current_user.provider_profile.id
+            provider_id=current_user.id
         ).update({'is_online': False})
         
         # If going online with new location, create new location record for live tracking
@@ -221,7 +221,7 @@ def toggle_online_status(current_user):
                 return jsonify({'error': 'Invalid coordinates for Egypt'}), 400
                 
             location = ProviderLocation(
-                provider_id=current_user.provider_profile.id,
+                provider_id=current_user.id,
                 latitude=float(latitude),
                 longitude=float(longitude),
                 is_online=True,
