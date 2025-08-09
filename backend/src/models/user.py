@@ -25,6 +25,7 @@ class User(db.Model):
     customer_profile = db.relationship('CustomerProfile', backref='user', uselist=False, cascade='all, delete-orphan')
     provider_profile = db.relationship('ServiceProviderProfile', foreign_keys='ServiceProviderProfile.user_id', backref='user', uselist=False, cascade='all, delete-orphan')
     verified_providers = db.relationship('ServiceProviderProfile', foreign_keys='ServiceProviderProfile.verified_by', backref='verifier', lazy='dynamic')
+    provider_locations = db.relationship('ProviderLocation', backref='user', cascade='all, delete-orphan')
     
     def set_password(self, password):
         """Hash and set password"""
@@ -125,7 +126,6 @@ class ServiceProviderProfile(db.Model):
     # Relationships
     services = db.relationship('ProviderService', backref='provider', cascade='all, delete-orphan')
     bookings = db.relationship('Booking', backref='provider', lazy='dynamic')
-    locations = db.relationship('ProviderLocation', backref='provider', cascade='all, delete-orphan')
     service_areas = db.relationship('ProviderServiceArea', backref='provider', cascade='all, delete-orphan')
     documents = db.relationship('ProviderDocument', backref='provider', cascade='all, delete-orphan')
     
