@@ -89,7 +89,7 @@ const BookingPage = () => {
       try {
         const serviceResponse = await apiClient.getService(serviceId, 'ar');
         setService(serviceResponse);
-        await searchProviders();
+        await searchProviders(serviceResponse.id);
         return;
       } catch (serviceError) {
         console.log('Not a service ID, trying as category...');
@@ -344,7 +344,7 @@ const BookingPage = () => {
                             await startWatching();
                             setShareLocationEnabled(true);
                             // Refresh providers with new location
-                            await searchProviders();
+                            await searchProviders(service?.id);
                           } catch (err) {
                             console.error('Failed to start location sharing:', err);
                           }
