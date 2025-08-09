@@ -3,7 +3,9 @@ from flask_jwt_extended import create_access_token, create_refresh_token, jwt_re
 from datetime import datetime, timedelta
 from src.models import db
 from src.models.user import User, CustomerProfile, ServiceProviderProfile
+from src.models.location import ProviderLocation, ProviderServiceArea
 from src.utils.auth import validate_email, validate_phone, normalize_phone, validate_password, token_required
+from src.utils.location import validate_coordinates
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -93,6 +95,46 @@ def register():
             )
         
         db.session.add(profile)
+        
+        # If this is a service provider and location data is provided, save initial location
+        if data['user_type'] == 'service_provider' and 'latitude' in data and 'longitude' in data:
+            try:
+                latitude = float(data['latitude'])
+                longitude = float(data['longitude'])
+                
+                if validate_coordinates(latitude, longitude):
+                    # Create initial location entry
+                    initial_location = ProviderLocation(
+                        provider_id=profile.id,
+                        latitude=latitude,
+                        longitude=longitude,
+                        is_online=True,
+                        accuracy=data.get('accuracy', 10.0),
+                        battery_level=data.get('battery_level', 100)
+                    )
+                    db.session.add(initial_location)
+                    
+                    # Create default service area around initial location
+                    service_radius = data.get('service_radius', 15.0)
+                    service_area = ProviderServiceArea(
+                        provider_id=profile.id,
+                        area_name=data.get('area_name', 'Primary Service Area'),
+                        center_latitude=latitude,
+                        center_longitude=longitude,
+                        radius_km=service_radius,
+                        is_primary_area=True,
+                        travel_time_minutes=30
+                    )
+                    db.session.add(service_area)
+                    
+                    # Update provider profile with service radius
+                    profile.service_radius = int(service_radius)
+                    profile.is_available = True
+                    
+            except (ValueError, TypeError) as e:
+                # If location data is invalid, continue without it
+                print(f"Invalid location data during registration: {e}")
+        
         db.session.commit()
         
         # Create tokens
