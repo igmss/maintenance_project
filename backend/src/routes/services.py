@@ -9,6 +9,21 @@ from src.utils.location import find_nearby_providers, calculate_distance, estima
 
 services_bp = Blueprint('services', __name__)
 
+@services_bp.route('/<service_id>', methods=['GET'])
+def get_service(service_id):
+    """Get a single service by ID"""
+    try:
+        language = request.args.get('lang', 'en')
+        service = Service.query.get(service_id)
+        
+        if not service:
+            return jsonify({'error': 'Service not found'}), 404
+            
+        return jsonify(service.to_dict(language)), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @services_bp.route('/categories', methods=['GET'])
 def get_service_categories():
     """Get all active service categories"""
