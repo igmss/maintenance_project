@@ -43,21 +43,6 @@ def get_category_services(category_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@services_bp.route('/<service_id>', methods=['GET'])
-def get_service_by_id(service_id):
-    """Get a specific service by ID"""
-    try:
-        language = request.args.get('lang', 'en')
-        service = Service.query.filter_by(id=service_id, is_active=True).first()
-        
-        if not service:
-            return jsonify({'error': 'Service not found'}), 404
-        
-        return jsonify(service.to_dict(language)), 200
-        
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
 @services_bp.route('/search', methods=['POST'])
 def search_providers():
     """Search for service providers based on location and service"""
@@ -445,5 +430,21 @@ def create_review(current_user, booking_id):
         
     except Exception as e:
         db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+# IMPORTANT: This route must be LAST to avoid conflicts with /categories/* routes
+@services_bp.route('/<service_id>', methods=['GET'])
+def get_service_by_id(service_id):
+    """Get a specific service by ID"""
+    try:
+        language = request.args.get('lang', 'en')
+        service = Service.query.filter_by(id=service_id, is_active=True).first()
+        
+        if not service:
+            return jsonify({'error': 'Service not found'}), 404
+        
+        return jsonify(service.to_dict(language)), 200
+        
+    except Exception as e:
         return jsonify({'error': str(e)}), 500
 
