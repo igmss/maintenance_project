@@ -38,6 +38,7 @@ import {
   getCurrentLocation,
   getInitials 
 } from '../lib/utils';
+import { useLocation } from '../hooks/useLocation';
 
 const BookingPage = () => {
   const { serviceId } = useParams();
@@ -58,6 +59,20 @@ const BookingPage = () => {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [userLocation, setUserLocation] = useState(null);
+  const [shareLocationEnabled, setShareLocationEnabled] = useState(false);
+  
+  // Use location hook for customer location sharing
+  const { 
+    location: liveLocation, 
+    loading: locationLoading, 
+    error: locationError,
+    watching: locationWatching,
+    getCurrentLocation: getLocation,
+    startWatching,
+    stopWatching,
+    shareLocation,
+    getNearbyProviders
+  } = useLocation();
 
   useEffect(() => {
     loadServiceData();
@@ -116,15 +131,27 @@ const BookingPage = () => {
 
   const searchProviders = async (actualServiceId = null) => {
     try {
-      const searchData = {
-        service_id: actualServiceId || service?.id || serviceId,  // Use actual service ID
-        latitude: userLocation?.latitude || 30.0444, // Default to Cairo
-        longitude: userLocation?.longitude || 31.2357,
-        max_distance_km: 25  // Fixed: use max_distance_km as backend expects
-      };
+      const currentLocation = liveLocation || userLocation;
       
-      const response = await apiClient.searchProviders(searchData);
-      setProviders(response.providers || []);
+      if (shareLocationEnabled && currentLocation) {
+        // Use new nearby providers API with customer location
+        const nearbyResponse = await getNearbyProviders(
+          actualServiceId || service?.id || serviceId,
+          currentLocation
+        );
+        setProviders(nearbyResponse.providers || []);
+      } else {
+        // Fallback to original search
+        const searchData = {
+          service_id: actualServiceId || service?.id || serviceId,
+          latitude: currentLocation?.latitude || 30.0444, // Default to Cairo
+          longitude: currentLocation?.longitude || 31.2357,
+          max_distance_km: 25
+        };
+        
+        const response = await apiClient.searchProviders(searchData);
+        setProviders(response.providers || []);
+      }
     } catch (error) {
       console.error('Failed to search providers:', error);
     }
@@ -177,12 +204,18 @@ const BookingPage = () => {
       const bookingPayload = {
         service_id: service.id,
         provider_id: selectedProvider.id,
-        scheduled_date: `${format(selectedDate, 'yyyy-MM-dd')} ${selectedTime}:00`,
-        description: bookingData.description,
-        customer_address: bookingData.address,
-        customer_phone: bookingData.phone,
-        is_emergency: bookingData.emergency,
-        total_amount: calculateTotalPrice()
+        scheduled_date: `${format(selectedDate, 'yyyy-MM-dd')}T${selectedTime}:00`,
+        special_instructions: bookingData.description,
+        service_address: {
+          street: bookingData.address,
+          city: userLocation?.city || 'القاهرة',
+          governorate: userLocation?.governorate || 'القاهرة',
+          latitude: userLocation?.latitude || 30.0444,
+          longitude: userLocation?.longitude || 31.2357,
+          formatted_address: bookingData.address,
+          phone: bookingData.phone
+        },
+        is_emergency: bookingData.emergency
       };
 
       const response = await apiClient.createBooking(bookingPayload);
@@ -277,6 +310,79 @@ const BookingPage = () => {
             </CardContent>
           </Card>
 
+          {/* Location Sharing Controls */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MapPin className="h-5 w-5" />
+                مشاركة الموقع المباشر
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">تفعيل مشاركة الموقع المباشر</p>
+                    <p className="text-sm text-gray-600">للعثور على أقرب مقدمي الخدمة إليك</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant={shareLocationEnabled ? "default" : "outline"}
+                      size="sm"
+                      onClick={async () => {
+                        if (!shareLocationEnabled) {
+                          try {
+                            await getLocation();
+                            await startWatching();
+                            setShareLocationEnabled(true);
+                            // Refresh providers with new location
+                            await searchProviders();
+                          } catch (err) {
+                            console.error('Failed to start location sharing:', err);
+                          }
+                        } else {
+                          stopWatching();
+                          setShareLocationEnabled(false);
+                        }
+                      }}
+                      disabled={locationLoading}
+                    >
+                      {locationLoading ? (
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      ) : shareLocationEnabled ? (
+                        <>
+                          <CheckCircle className="h-4 w-4 mr-2" />
+                          مُفعل
+                        </>
+                      ) : (
+                        'تفعيل'
+                      )}
+                    </Button>
+                  </div>
+                </div>
+                
+                {locationError && (
+                  <Alert variant="destructive">
+                    <AlertDescription>{locationError}</AlertDescription>
+                  </Alert>
+                )}
+                
+                {liveLocation && shareLocationEnabled && (
+                  <div className="bg-green-50 p-3 rounded-lg">
+                    <div className="flex items-center text-green-700">
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      <span className="text-sm font-medium">الموقع مُحدث ومُشارك</span>
+                    </div>
+                    <p className="text-xs text-green-600 mt-1">
+                      دقة الموقع: {liveLocation.accuracy?.toFixed(0)} متر
+                    </p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Provider Selection */}
           <Card>
             <CardHeader>
@@ -321,6 +427,11 @@ const BookingPage = () => {
                             {provider.is_verified && (
                               <Shield className="h-4 w-4 text-green-600" />
                             )}
+                            {provider.current_location && shareLocationEnabled && (
+                              <Badge variant="secondary" className="bg-green-100 text-green-700 text-xs">
+                                متصل الآن
+                              </Badge>
+                            )}
                           </div>
                           <div className="flex items-center space-x-4 space-x-reverse text-sm text-gray-500">
                             <div className="flex items-center">
@@ -329,8 +440,21 @@ const BookingPage = () => {
                             </div>
                             <div className="flex items-center">
                               <MapPin className="h-4 w-4 mr-1" />
-                              <span>{formatDistance(provider.distance || 0)}</span>
+                              <span>
+                                {provider.distance_km 
+                                  ? `${provider.distance_km} كم`
+                                  : formatDistance(provider.distance || 0)
+                                }
+                              </span>
                             </div>
+                            {provider.current_location && shareLocationEnabled && (
+                              <div className="flex items-center text-green-600">
+                                <Clock className="h-4 w-4 mr-1" />
+                                <span className="text-xs">
+                                  آخر تحديث: {new Date(provider.current_location.last_updated).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                              </div>
+                            )}
                           </div>
                           <p className="text-xs text-gray-400 mt-1">
                             {provider.completed_jobs || 0} خدمة مكتملة

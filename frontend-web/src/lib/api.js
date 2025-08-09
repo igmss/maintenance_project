@@ -55,6 +55,14 @@ class ApiClient {
         return;
       }
 
+      // Check if response is JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text();
+        console.error('Non-JSON response:', text);
+        throw new Error(`Server returned non-JSON response: ${response.status} ${response.statusText}`);
+      }
+
       const data = await response.json();
 
       if (!response.ok) {
@@ -166,6 +174,25 @@ class ApiClient {
   // Provider endpoints
   async getProviderProfile() {
     return this.request('/providers/profile');
+  }
+
+  // Customer location APIs
+  async updateCustomerLocation(locationData) {
+    return this.request('/customers/location', {
+      method: 'POST',
+      body: locationData,
+    });
+  }
+
+  async getCustomerLocation() {
+    return this.request('/customers/location');
+  }
+
+  async getNearbyProviders(searchData) {
+    return this.request('/customers/nearby-providers', {
+      method: 'POST',
+      body: searchData,
+    });
   }
 
   async getPublicProviderProfile(providerId) {

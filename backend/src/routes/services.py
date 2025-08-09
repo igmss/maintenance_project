@@ -79,7 +79,7 @@ def search_providers():
             
             # Get provider's current location
             location = ProviderLocation.query.filter_by(
-                provider_id=provider.id,
+                provider_id=provider.user_id,  # Use user_id since ProviderLocation references users.id
                 is_online=True
             ).order_by(ProviderLocation.last_updated.desc()).first()
             

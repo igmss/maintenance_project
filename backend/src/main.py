@@ -18,7 +18,7 @@ load_dotenv()
 from src.models import db
 from src.models.user import User, CustomerProfile, ServiceProviderProfile, CustomerAddress, ProviderDocument
 from src.models.service import ServiceCategory, Service, ProviderService, Booking, BookingStatusHistory, BookingReview
-from src.models.location import ProviderLocation, ProviderServiceArea, BookingLocation, Governorate, City
+from src.models.location import ProviderLocation, ProviderServiceArea, BookingLocation, Governorate, City, CustomerLocation
 
 # Import routes
 from src.routes.auth import auth_bp
@@ -91,6 +91,10 @@ def create_app():
     app.register_blueprint(services_bp, url_prefix='/api/services')
     app.register_blueprint(providers_bp, url_prefix='/api/providers')
     app.register_blueprint(admin_bp, url_prefix='/api/admin')
+    
+    # Customer-specific routes
+    from src.routes.customers import customers_bp
+    app.register_blueprint(customers_bp, url_prefix='/api/customers')
     
     # Static file serving for uploads
     @app.route('/uploads/<path:filename>')

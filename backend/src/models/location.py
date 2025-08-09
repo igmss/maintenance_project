@@ -147,3 +147,32 @@ class City(db.Model):
             'governorate': self.governorate.to_dict(language) if self.governorate else None
         }
 
+class CustomerLocation(db.Model):
+    """Customer live location tracking for better service matching"""
+    __tablename__ = 'customer_locations'
+    
+    id = db.Column(db.String(36), primary_key=True, default=generate_uuid)
+    customer_id = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=False)
+    latitude = db.Column(db.Numeric(10, 8), nullable=False)
+    longitude = db.Column(db.Numeric(11, 8), nullable=False)
+    accuracy = db.Column(db.Numeric(6, 2))  # GPS accuracy in meters
+    address_components = db.Column(db.JSON)  # Geocoded address details
+    formatted_address = db.Column(db.Text)
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    last_updated = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'customer_id': self.customer_id,
+            'latitude': float(self.latitude),
+            'longitude': float(self.longitude),
+            'accuracy': float(self.accuracy) if self.accuracy else None,
+            'address_components': self.address_components,
+            'formatted_address': self.formatted_address,
+            'is_active': self.is_active,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'last_updated': self.last_updated.isoformat() if self.last_updated else None
+        }
+
