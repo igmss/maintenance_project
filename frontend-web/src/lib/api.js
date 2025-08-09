@@ -205,18 +205,35 @@ class ApiClient {
     return this.request(`/providers/online?${queryParams}`);
   }
 
-  // Update provider online status
+    // Update provider online status with live location
   async updateOnlineStatus(isOnline, location = null) {
     const body = { is_online: isOnline };
     
     if (isOnline && location) {
       body.latitude = location.latitude;
       body.longitude = location.longitude;
+      body.accuracy = location.accuracy;
+      body.heading = location.heading;
+      body.speed = location.speed;
     }
-    
+
     return this.request('/providers/status', {
       method: 'POST',
       body: body,
+    });
+  }
+
+  // Update live location while online (continuous tracking)
+  async updateLiveLocation(location) {
+    return this.request('/providers/live-location', {
+      method: 'POST',
+      body: {
+        latitude: location.latitude,
+        longitude: location.longitude,
+        accuracy: location.accuracy,
+        heading: location.heading,
+        speed: location.speed
+      }
     });
   }
 
@@ -227,12 +244,7 @@ class ApiClient {
     });
   }
 
-  async addServiceArea(areaData) {
-    return this.request('/providers/service-areas', {
-      method: 'POST',
-      body: areaData,
-    });
-  }
+  // Service area methods removed - now using live location instead
 
   async uploadDocument(documentData) {
     return this.request('/providers/documents', {

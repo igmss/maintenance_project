@@ -190,11 +190,11 @@ def update_location(current_user):
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
-# Toggle provider online/offline status
+# Toggle provider online/offline status with live location
 @providers_bp.route('/status', methods=['POST'])
 @provider_required
 def toggle_online_status(current_user):
-    """Toggle provider online/offline status"""
+    """Toggle provider online/offline status with automatic live location sharing"""
     try:
         data = request.get_json()
         
@@ -202,16 +202,20 @@ def toggle_online_status(current_user):
         latitude = data.get('latitude')
         longitude = data.get('longitude')
         
-        # If going online, location is required
+        # If going online, location is REQUIRED for live location sharing
         if is_online and (not latitude or not longitude):
-            return jsonify({'error': 'Location is required when going online'}), 400
+            return jsonify({
+                'error': 'Live location is required when going online',
+                'requires_location': True,
+                'message': 'Please allow location access to enable live location sharing while online'
+            }), 400
         
         # Update all existing locations for this provider to offline first
         ProviderLocation.query.filter_by(
             provider_id=current_user.provider_profile.id
         ).update({'is_online': False})
         
-        # If going online with new location, create new location record
+        # If going online with new location, create new location record for live tracking
         if is_online and latitude and longitude:
             if not validate_coordinates(float(latitude), float(longitude)):
                 return jsonify({'error': 'Invalid coordinates for Egypt'}), 400
@@ -220,7 +224,11 @@ def toggle_online_status(current_user):
                 provider_id=current_user.provider_profile.id,
                 latitude=float(latitude),
                 longitude=float(longitude),
-                is_online=True
+                is_online=True,
+                accuracy=data.get('accuracy', 10.0),
+                heading=data.get('heading'),
+                speed=data.get('speed'),
+                battery_level=data.get('battery_level')
             )
             db.session.add(location)
         
@@ -231,10 +239,88 @@ def toggle_online_status(current_user):
         
         db.session.commit()
         
-        return jsonify({
-            'message': f'Provider status updated to {"online" if is_online else "offline"}',
+        response_data = {
+            'message': f'Provider status updated to {"online with live location" if is_online else "offline"}',
             'is_online': is_online,
-            'is_available': is_online
+            'is_available': is_online,
+            'live_location_enabled': is_online
+        }
+        
+        if is_online:
+            response_data['location_sharing_info'] = {
+                'message': 'Live location sharing is now active. Your location will be updated automatically while online.',
+                'privacy_note': 'Your location is only shared with customers when they request services near you.'
+            }
+        else:
+            response_data['location_sharing_info'] = {
+                'message': 'Live location sharing has been stopped.',
+                'privacy_note': 'Your location is no longer being tracked or shared.'
+            }
+        
+        return jsonify(response_data), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+# Update live location while online (for continuous tracking)
+@providers_bp.route('/live-location', methods=['POST'])
+@provider_required
+def update_live_location(current_user):
+    """Update live location for online providers (continuous tracking)"""
+    try:
+        data = request.get_json()
+        
+        latitude = data.get('latitude')
+        longitude = data.get('longitude')
+        
+        if not latitude or not longitude:
+            return jsonify({'error': 'Latitude and longitude are required'}), 400
+        
+        if not validate_coordinates(float(latitude), float(longitude)):
+            return jsonify({'error': 'Invalid coordinates for Egypt'}), 400
+        
+        # Check if provider is currently online
+        provider = current_user.provider_profile
+        if not provider.is_available:
+            return jsonify({'error': 'Provider is not online'}), 400
+        
+        # Update the most recent online location or create new one
+        recent_location = ProviderLocation.query.filter_by(
+            provider_id=provider.id,
+            is_online=True
+        ).order_by(ProviderLocation.last_updated.desc()).first()
+        
+        if recent_location:
+            # Update existing location
+            recent_location.latitude = float(latitude)
+            recent_location.longitude = float(longitude)
+            recent_location.accuracy = data.get('accuracy', recent_location.accuracy)
+            recent_location.heading = data.get('heading', recent_location.heading)
+            recent_location.speed = data.get('speed', recent_location.speed)
+            recent_location.battery_level = data.get('battery_level', recent_location.battery_level)
+            recent_location.last_updated = datetime.utcnow()
+        else:
+            # Create new location if none exists
+            location = ProviderLocation(
+                provider_id=provider.id,
+                latitude=float(latitude),
+                longitude=float(longitude),
+                is_online=True,
+                accuracy=data.get('accuracy', 10.0),
+                heading=data.get('heading'),
+                speed=data.get('speed'),
+                battery_level=data.get('battery_level')
+            )
+            db.session.add(location)
+        
+        db.session.commit()
+        
+        return jsonify({
+            'message': 'Live location updated successfully',
+            'latitude': float(latitude),
+            'longitude': float(longitude),
+            'timestamp': datetime.utcnow().isoformat()
         }), 200
         
     except Exception as e:

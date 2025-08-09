@@ -47,6 +47,9 @@ const ProviderDashboard = () => {
   const [bookings, setBookings] = useState([]);
   const [isAvailable, setIsAvailable] = useState(true);
   const [loading, setLoading] = useState(true);
+  const [locationWatchId, setLocationWatchId] = useState(null);
+  const [locationError, setLocationError] = useState(null);
+  const [locationPermissionStatus, setLocationPermissionStatus] = useState('unknown');
   const [stats, setStats] = useState({
     totalBookings: 0,
     completedBookings: 0,
@@ -59,6 +62,13 @@ const ProviderDashboard = () => {
   useEffect(() => {
     loadDashboardData();
   }, []);
+
+  // Cleanup effect to stop location tracking on unmount
+  useEffect(() => {
+    return () => {
+      stopLocationTracking();
+    };
+  }, [locationWatchId]);
 
   const loadDashboardData = async () => {
     try {
@@ -98,12 +108,141 @@ const ProviderDashboard = () => {
     }
   };
 
+  // Request location permission and get current position
+  const requestLocationPermission = () => {
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) {
+        reject(new Error('Geolocation is not supported by this browser'));
+        return;
+      }
+
+      // Check current permission status if supported
+      if (navigator.permissions) {
+        navigator.permissions.query({ name: 'geolocation' }).then((result) => {
+          setLocationPermissionStatus(result.state);
+        });
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setLocationError(null);
+          resolve({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+            accuracy: position.coords.accuracy,
+            heading: position.coords.heading,
+            speed: position.coords.speed
+          });
+        },
+        (error) => {
+          let errorMessage = 'Unable to get location';
+          switch (error.code) {
+            case error.PERMISSION_DENIED:
+              errorMessage = 'Location access denied. Please allow location access to go online.';
+              setLocationPermissionStatus('denied');
+              break;
+            case error.POSITION_UNAVAILABLE:
+              errorMessage = 'Location information unavailable';
+              break;
+            case error.TIMEOUT:
+              errorMessage = 'Location request timed out';
+              break;
+          }
+          setLocationError(errorMessage);
+          reject(new Error(errorMessage));
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 30000
+        }
+      );
+    });
+  };
+
+  // Start live location tracking
+  const startLocationTracking = () => {
+    if (!navigator.geolocation || locationWatchId) {
+      return;
+    }
+
+    const watchId = navigator.geolocation.watchPosition(
+      (position) => {
+        const location = {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          accuracy: position.coords.accuracy,
+          heading: position.coords.heading,
+          speed: position.coords.speed
+        };
+
+        // Update live location every 30 seconds or when position changes significantly
+        apiClient.updateLiveLocation(location).catch(error => {
+          console.error('Failed to update live location:', error);
+        });
+      },
+      (error) => {
+        console.error('Location tracking error:', error);
+        setLocationError('Live location tracking failed');
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 30000,
+        maximumAge: 30000
+      }
+    );
+
+    setLocationWatchId(watchId);
+  };
+
+  // Stop live location tracking
+  const stopLocationTracking = () => {
+    if (locationWatchId) {
+      navigator.geolocation.clearWatch(locationWatchId);
+      setLocationWatchId(null);
+    }
+  };
+
   const handleAvailabilityToggle = async (available) => {
     try {
-      await apiClient.updateAvailability({ is_available: available });
-      setIsAvailable(available);
+      if (available) {
+        // Going online - request location permission and start live tracking
+        try {
+          const location = await requestLocationPermission();
+          
+          // Update online status with location
+          await apiClient.updateOnlineStatus(true, location);
+          
+          // Start continuous location tracking
+          startLocationTracking();
+          
+          setIsAvailable(true);
+          setLocationError(null);
+          
+          // Show success message
+          alert('You are now online with live location sharing enabled!');
+          
+        } catch (locationError) {
+          // Handle location permission denied or other errors
+          console.error('Location error:', locationError);
+          alert(`Cannot go online: ${locationError.message}\n\nPlease allow location access to enable live location sharing while online.`);
+          return; // Don't change availability if location fails
+        }
+      } else {
+        // Going offline - stop location tracking
+        stopLocationTracking();
+        
+        // Update online status to offline
+        await apiClient.updateOnlineStatus(false);
+        
+        setIsAvailable(false);
+        setLocationError(null);
+        
+        alert('You are now offline. Live location sharing has been stopped.');
+      }
     } catch (error) {
       console.error('Failed to update availability:', error);
+      alert('Failed to update online status. Please try again.');
     }
   };
 
@@ -159,13 +298,29 @@ const ProviderDashboard = () => {
             </div>
             
             <div className="flex items-center space-x-4 space-x-reverse">
-              {/* Availability Toggle */}
-              <div className="flex items-center space-x-2 space-x-reverse">
-                <span className="text-sm text-gray-600">متاح للعمل</span>
-                <Switch
-                  checked={isAvailable}
-                  onCheckedChange={handleAvailabilityToggle}
-                />
+              {/* Availability Toggle with Location Status */}
+              <div className="flex items-center space-x-3 space-x-reverse">
+                <div className="flex flex-col">
+                  <div className="flex items-center space-x-2 space-x-reverse">
+                    <span className="text-sm text-gray-600">متاح للعمل</span>
+                    <Switch
+                      checked={isAvailable}
+                      onCheckedChange={handleAvailabilityToggle}
+                    />
+                  </div>
+                  {isAvailable && (
+                    <div className="flex items-center space-x-1 space-x-reverse mt-1">
+                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                      <span className="text-xs text-green-600">الموقع المباشر مُفعل</span>
+                    </div>
+                  )}
+                  {locationError && (
+                    <div className="flex items-center space-x-1 space-x-reverse mt-1">
+                      <AlertCircle className="w-3 h-3 text-red-500" />
+                      <span className="text-xs text-red-600">خطأ في الموقع</span>
+                    </div>
+                  )}
+                </div>
               </div>
               
               <Button variant="ghost" size="sm">
@@ -338,9 +493,9 @@ const ProviderDashboard = () => {
               <MapPin className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{profile?.service_areas?.length || 0}</div>
+              <div className="text-2xl font-bold">{isAvailable ? 'مُفعل' : 'معطل'}</div>
               <p className="text-xs text-muted-foreground">
-                منطقة مغطاة
+                الموقع المباشر
               </p>
             </CardContent>
           </Card>
@@ -426,12 +581,15 @@ const ProviderDashboard = () => {
                   </Link>
                 </Button>
                 
-                <Button variant="outline" className="w-full" asChild>
-                  <Link to="/service-areas">
-                    <MapPin className="mr-2 h-4 w-4" />
-                    إدارة مناطق الخدمة
-                  </Link>
-                </Button>
+                <div className="w-full p-3 border rounded-lg bg-green-50 border-green-200">
+                  <div className="flex items-center space-x-2 space-x-reverse">
+                    <MapPin className="h-4 w-4 text-green-600" />
+                    <span className="text-sm font-medium text-green-800">الموقع المباشر</span>
+                  </div>
+                  <p className="text-xs text-green-600 mt-1">
+                    يتم مشاركة موقعك تلقائياً عند تفعيل الخدمة
+                  </p>
+                </div>
                 
                 <Button variant="outline" className="w-full" asChild>
                   <Link to="/profile">

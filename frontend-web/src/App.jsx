@@ -14,7 +14,7 @@ import ProfilePage from './pages/ProfilePage';
 import ServicesPage from './pages/ServicesPage';
 import BookingsPage from './pages/BookingsPage';
 import AddServicePage from './pages/AddServicePage';
-import ServiceAreasPage from './pages/ServiceAreasPage';
+// Service areas removed - now using live location instead
 import VerificationPage from './pages/VerificationPage';
 
 import './App.css';
@@ -166,14 +166,7 @@ function AppRoutes() {
           </ProtectedRoute>
         } 
       />
-      <Route 
-        path="/service-areas" 
-        element={
-          <ProtectedRoute requiredUserType="service_provider">
-            <ServiceAreasPage />
-          </ProtectedRoute>
-        } 
-      />
+      {/* Service areas route removed - now using live location instead */}
       <Route 
         path="/verification" 
         element={
