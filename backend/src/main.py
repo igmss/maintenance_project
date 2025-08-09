@@ -63,7 +63,11 @@ def create_app():
     }
     
     # Initialize extensions
-    CORS(app, origins="*", allow_headers=["Content-Type", "Authorization"])
+    CORS(app, 
+         origins=["https://siyaana.netlify.app", "http://localhost:3000", "http://localhost:5173"],
+         allow_headers=["Content-Type", "Authorization", "Accept", "Origin", "X-Requested-With"],
+         methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+         supports_credentials=True)
     jwt = JWTManager(app)
     
     # Initialize database

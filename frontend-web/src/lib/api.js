@@ -134,6 +134,10 @@ class ApiClient {
     return this.request(`/services/categories/${categoryId}/services?lang=${language}`);
   }
 
+  async getService(serviceId, language = 'en') {
+    return this.request(`/services/${serviceId}?lang=${language}`);
+  }
+
   async searchProviders(searchData) {
     return this.request('/services/search', {
       method: 'POST',
