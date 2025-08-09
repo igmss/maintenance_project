@@ -80,37 +80,43 @@ const BookingPage = () => {
   }, [serviceId]);
 
   const loadServiceData = async () => {
+    setLoading(true);
+    setError('');
+    
     try {
-      // First, check if serviceId is a service or category
-      // Try to get it as a service first
+      // First, try to get it as a service
       try {
         const serviceResponse = await apiClient.getService(serviceId, 'ar');
         setService(serviceResponse);
         await searchProviders();
         return;
       } catch (serviceError) {
-        // If not found as service, try as category and get first service
         console.log('Not a service ID, trying as category...');
       }
       
-      // Get services within the category
-      const categoryServicesResponse = await apiClient.getCategoryServices(serviceId, 'ar');
-      
-      if (categoryServicesResponse.services && categoryServicesResponse.services.length > 0) {
-        // Use the first service in the category as default
-        const firstService = categoryServicesResponse.services[0];
-        setService({
-          id: firstService.id,
-          name: firstService.name,
-          description: firstService.description,
-          base_price: firstService.base_price,
-          category: categoryServicesResponse.category
-        });
+      // If not a service, try as category and get services in it
+      try {
+        const categoryServicesResponse = await apiClient.getCategoryServices(serviceId, 'ar');
         
-        // Search for providers with the actual service ID
-        await searchProviders(firstService.id);
-      } else {
-        setError('لا توجد خدمات متاحة في هذه الفئة');
+        if (categoryServicesResponse.services && categoryServicesResponse.services.length > 0) {
+          // Use the first service in the category as default
+          const firstService = categoryServicesResponse.services[0];
+          setService({
+            id: firstService.id,
+            name: firstService.name,
+            description: firstService.description,
+            base_price: firstService.base_price,
+            category: categoryServicesResponse.category
+          });
+          
+          // Search for providers with the actual service ID
+          await searchProviders(firstService.id);
+        } else {
+          setError('لا توجد خدمات متاحة في هذه الفئة');
+        }
+      } catch (categoryError) {
+        console.error('Failed to load category services:', categoryError);
+        setError('فئة الخدمة غير موجودة');
       }
     } catch (error) {
       console.error('Failed to load service data:', error);
