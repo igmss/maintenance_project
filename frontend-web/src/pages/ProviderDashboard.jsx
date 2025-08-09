@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -55,6 +55,7 @@ const ProviderDashboard = () => {
     averageRating: 0,
     completionRate: 0
   });
+  const locationIntervalRef = useRef(null);
 
   useEffect(() => {
     loadDashboardData();
@@ -98,12 +99,71 @@ const ProviderDashboard = () => {
     }
   };
 
-  const handleAvailabilityToggle = async (available) => {
+  const stopLocationSharing = () => {
+    if (locationIntervalRef.current) {
+      clearInterval(locationIntervalRef.current);
+      locationIntervalRef.current = null;
+    }
+  };
+
+  const startLocationSharing = async () => {
+    if (!('geolocation' in navigator)) {
+      alert('المتصفح لا يدعم تحديد الموقع.');
+      return false;
+    }
+
+    const getPosition = () => new Promise((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(resolve, reject, {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0,
+      });
+    });
+
     try {
-      await apiClient.updateAvailability({ is_available: available });
-      setIsAvailable(available);
+      const pos = await getPosition();
+      const { latitude, longitude } = pos.coords;
+      await apiClient.updateOnlineStatus(true, { latitude, longitude });
+
+      // Send live updates every 30 seconds
+      stopLocationSharing();
+      locationIntervalRef.current = setInterval(async () => {
+        try {
+          const p = await getPosition();
+          await apiClient.updateLocation({
+            latitude: p.coords.latitude,
+            longitude: p.coords.longitude,
+            is_online: true,
+          });
+        } catch (e) {
+          // Swallow intermittent errors
+        }
+      }, 30000);
+
+      return true;
     } catch (error) {
-      console.error('Failed to update availability:', error);
+      console.error('Location permission/update failed:', error);
+      alert('يجب السماح بمشاركة الموقع للظهور كمتاح وقريب من العملاء.');
+      return false;
+    }
+  };
+
+  const handleAvailabilityToggle = async (available) => {
+    if (available) {
+      const ok = await startLocationSharing();
+      setIsAvailable(ok);
+      if (!ok) {
+        stopLocationSharing();
+      }
+    } else {
+      try {
+        await apiClient.updateOnlineStatus(false);
+      } catch (error) {
+        console.error('Failed to go offline:', error);
+      } finally {
+        stopLocationSharing();
+        setIsAvailable(false);
+      }
     }
   };
 
@@ -138,6 +198,12 @@ const ProviderDashboard = () => {
         return 'غير محدد';
     }
   };
+
+  useEffect(() => {
+    return () => {
+      stopLocationSharing();
+    };
+  }, []);
 
   if (loading) {
     return (
@@ -426,12 +492,7 @@ const ProviderDashboard = () => {
                   </Link>
                 </Button>
                 
-                <Button variant="outline" className="w-full" asChild>
-                  <Link to="/service-areas">
-                    <MapPin className="mr-2 h-4 w-4" />
-                    إدارة مناطق الخدمة
-                  </Link>
-                </Button>
+                {/* Service areas are deprecated in favor of live location sharing */}
                 
                 <Button variant="outline" className="w-full" asChild>
                   <Link to="/profile">
