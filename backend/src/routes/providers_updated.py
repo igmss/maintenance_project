@@ -255,7 +255,7 @@ def get_online_providers():
         # Base query for online providers
         query = db.session.query(ServiceProviderProfile).join(
             ProviderLocation,
-            ServiceProviderProfile.id == ProviderLocation.provider_id
+            ServiceProviderProfile.user_id == ProviderLocation.provider_id
         ).filter(
             ServiceProviderProfile.verification_status == 'approved',
             ServiceProviderProfile.is_available == True,
@@ -284,7 +284,7 @@ def get_online_providers():
             ProviderLocation.created_at
         ).join(
             ProviderLocation,
-            ServiceProviderProfile.id == ProviderLocation.provider_id
+            ServiceProviderProfile.user_id == ProviderLocation.provider_id
         ).join(
             subquery,
             db.and_(

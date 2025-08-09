@@ -353,7 +353,7 @@ def get_online_providers():
             ProviderLocation.created_at
         ).join(
             ProviderLocation,
-            ServiceProviderProfile.id == ProviderLocation.provider_id
+            ServiceProviderProfile.user_id == ProviderLocation.provider_id
         ).join(
             subquery,
             db.and_(
