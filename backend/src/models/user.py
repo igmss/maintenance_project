@@ -1,13 +1,15 @@
 from src.models import db, generate_uuid
 from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
+from sqlalchemy.dialects.postgresql import UUID
 import bcrypt
+import uuid
 
 class User(db.Model):
     """Base user model for all user types"""
     __tablename__ = 'users'
     
-    id = db.Column(db.String(36), primary_key=True, default=generate_uuid)
+    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     email = db.Column(db.String(255), unique=True, nullable=False, index=True)
     phone = db.Column(db.String(20), unique=True, index=True)
     password_hash = db.Column(db.String(255), nullable=False)
@@ -38,7 +40,7 @@ class User(db.Model):
     
     def to_dict(self):
         return {
-            'id': self.id,
+            'id': str(self.id),
             'email': self.email,
             'phone': self.phone,
             'user_type': self.user_type,
@@ -55,8 +57,8 @@ class CustomerProfile(db.Model):
     """Customer profile model"""
     __tablename__ = 'customer_profiles'
     
-    id = db.Column(db.String(36), primary_key=True, default=generate_uuid)
-    user_id = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=False)
+    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = db.Column(UUID(as_uuid=True), db.ForeignKey('users.id'), nullable=False)
     first_name = db.Column(db.String(100), nullable=False)
     last_name = db.Column(db.String(100), nullable=False)
     date_of_birth = db.Column(db.Date)
@@ -90,8 +92,8 @@ class ServiceProviderProfile(db.Model):
     """Service provider profile model"""
     __tablename__ = 'service_provider_profiles'
     
-    id = db.Column(db.String(36), primary_key=True, default=generate_uuid)
-    user_id = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=False)
+    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = db.Column(UUID(as_uuid=True), db.ForeignKey('users.id'), nullable=False)
     business_name = db.Column(db.String(200))  # Made nullable for registration
     first_name = db.Column(db.String(100), nullable=False)
     last_name = db.Column(db.String(100), nullable=False)

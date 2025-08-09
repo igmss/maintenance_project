@@ -168,34 +168,45 @@ def create_app():
     def bad_request(error):
         return jsonify({'error': 'Bad request'}), 400
     
-    # Serve frontend static files
-    @app.route('/', defaults={'path': ''})
-    @app.route('/<path:path>')
-    def serve(path):
+    # Root endpoint that returns API info instead of serving static files
+    @app.route('/')
+    def api_root():
+        return jsonify({
+            'message': 'Maintenance Platform API',
+            'version': '1.0.0',
+            'status': 'running',
+            'docs': '/api/info',
+            'endpoints': {
+                'Authentication': '/api/auth',
+                'Users': '/api/users',
+                'Services': '/api/services',
+                'Providers': '/api/providers',
+                'Customers': '/api/customers',
+                'Admin': '/api/admin',
+                'Health Check': '/api/health'
+            }
+        }), 200
+    
+    # Serve static test interface at /test
+    @app.route('/test')
+    def serve_test_interface():
         static_folder_path = app.static_folder
         if static_folder_path is None:
             return jsonify({'error': 'Static folder not configured'}), 404
-
-        if path != "" and os.path.exists(os.path.join(static_folder_path, path)):
-            return send_from_directory(static_folder_path, path)
+        
+        index_path = os.path.join(static_folder_path, 'index.html')
+        if os.path.exists(index_path):
+            return send_from_directory(static_folder_path, 'index.html')
         else:
-            index_path = os.path.join(static_folder_path, 'index.html')
-            if os.path.exists(index_path):
-                return send_from_directory(static_folder_path, 'index.html')
-            else:
-                return jsonify({
-                    'message': 'Maintenance Platform API',
-                    'version': '1.0.0',
-                    'status': 'running',
-                    'docs': '/api/info',
-                    'endpoints': {
-                        'Authentication': '/api/auth',
-                        'Services': '/api/services',
-                        'Providers': '/api/providers',
-                        'Admin': '/api/admin',
-                        'Health Check': '/api/health'
-                    }
-                }), 200
+            return jsonify({'error': 'Test interface not found'}), 404
+    
+    # Serve static files explicitly
+    @app.route('/static/<path:filename>')
+    def serve_static_files(filename):
+        static_folder_path = app.static_folder
+        if static_folder_path is None:
+            return jsonify({'error': 'Static folder not configured'}), 404
+        return send_from_directory(static_folder_path, filename)
     
     # Create database tables
     with app.app_context():
