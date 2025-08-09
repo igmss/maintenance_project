@@ -68,7 +68,7 @@ def search_providers():
             service_id=service_id,
             is_active=True
         ).join(ServiceProviderProfile).filter(
-            ServiceProviderProfile.verification_status == 'verified',
+            ServiceProviderProfile.verification_status == 'approved',
             ServiceProviderProfile.is_available == True
         ).all()
         

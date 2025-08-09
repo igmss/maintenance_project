@@ -106,7 +106,7 @@ def get_nearby_providers(current_user):
         ).filter(
             ServiceProviderProfile.id.in_(provider_ids),
             ServiceProviderProfile.is_available == True,
-            ServiceProviderProfile.verification_status == 'verified'
+            ServiceProviderProfile.verification_status == 'approved'
         ).all()
         
         # Calculate distances and filter by max distance
