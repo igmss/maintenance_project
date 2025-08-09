@@ -1,9 +1,9 @@
 from flask import Blueprint, request, jsonify
 from datetime import datetime
 from src.models import db
-from src.models.user import User
+from src.models.user import User, ServiceProviderProfile
 from src.models.location import CustomerLocation, ProviderLocation
-from src.models.service import ServiceProviderProfile, ProviderService
+from src.models.service import ProviderService
 from src.utils.auth import customer_required
 from src.utils.location import validate_coordinates, calculate_distance
 from sqlalchemy import and_, func
