@@ -2,7 +2,7 @@ from flask import Blueprint, request, jsonify
 from datetime import datetime
 import os
 from src.models import db
-from src.models.user import ServiceProviderProfile, ProviderDocument
+from src.models.user import User, ServiceProviderProfile, ProviderDocument
 from src.models.service import ProviderService, Service
 from src.models.location import ProviderLocation, ProviderServiceArea
 from src.utils.auth import token_required, provider_required, admin_required
@@ -157,7 +157,7 @@ def update_location(current_user):
         
         # Create new location entry with online status
         location = ProviderLocation(
-            provider_id=current_user.provider_profile.id,
+            provider_id=current_user.id,
             latitude=latitude,
             longitude=longitude,
             accuracy=data.get('accuracy'),
@@ -212,7 +212,7 @@ def toggle_online_status(current_user):
         
         # Update all existing locations for this provider to offline first
         ProviderLocation.query.filter_by(
-            provider_id=current_user.provider_profile.id
+            provider_id=current_user.id
         ).update({'is_online': False})
         
         # If going online with new location, create new location record for live tracking
@@ -221,7 +221,7 @@ def toggle_online_status(current_user):
                 return jsonify({'error': 'Invalid coordinates for Egypt'}), 400
                 
             location = ProviderLocation(
-                provider_id=current_user.provider_profile.id,
+                provider_id=current_user.id,
                 latitude=float(latitude),
                 longitude=float(longitude),
                 is_online=True,
@@ -287,7 +287,7 @@ def update_live_location(current_user):
         
         # Update the most recent online location or create new one
         recent_location = ProviderLocation.query.filter_by(
-            provider_id=provider.id,
+            provider_id=current_user.id,
             is_online=True
         ).order_by(ProviderLocation.last_updated.desc()).first()
         
@@ -303,7 +303,7 @@ def update_live_location(current_user):
         else:
             # Create new location if none exists
             location = ProviderLocation(
-                provider_id=provider.id,
+                provider_id=current_user.id,
                 latitude=float(latitude),
                 longitude=float(longitude),
                 is_online=True,
@@ -352,8 +352,11 @@ def get_online_providers():
             ProviderLocation.longitude,
             ProviderLocation.created_at
         ).join(
+            User,
+            ServiceProviderProfile.user_id == User.id
+        ).join(
             ProviderLocation,
-            ServiceProviderProfile.id == ProviderLocation.provider_id
+            User.id == ProviderLocation.provider_id
         ).join(
             subquery,
             db.and_(

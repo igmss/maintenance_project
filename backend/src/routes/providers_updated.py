@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from datetime import datetime
 from src.models import db
-from src.models.user import ServiceProviderProfile, ProviderDocument
+from src.models.user import User, ServiceProviderProfile, ProviderDocument
 from src.models.service import ProviderService, Service
 from src.models.location import ProviderLocation, ProviderServiceArea
 from src.utils.auth import token_required, provider_required, admin_required
@@ -254,8 +254,11 @@ def get_online_providers():
         
         # Base query for online providers
         query = db.session.query(ServiceProviderProfile).join(
+            User,
+            ServiceProviderProfile.user_id == User.id
+        ).join(
             ProviderLocation,
-            ServiceProviderProfile.id == ProviderLocation.provider_id
+            User.id == ProviderLocation.provider_id
         ).filter(
             ServiceProviderProfile.verification_status == 'approved',
             ServiceProviderProfile.is_available == True,
@@ -283,8 +286,11 @@ def get_online_providers():
             ProviderLocation.longitude,
             ProviderLocation.created_at
         ).join(
+            User,
+            ServiceProviderProfile.user_id == User.id
+        ).join(
             ProviderLocation,
-            ServiceProviderProfile.id == ProviderLocation.provider_id
+            User.id == ProviderLocation.provider_id
         ).join(
             subquery,
             db.and_(
