@@ -82,6 +82,7 @@ const BookingPage = () => {
   const loadServiceData = async () => {
     setLoading(true);
     setError('');
+    console.log('Loading service data for ID:', serviceId);
     
     try {
       // First, try to get it as a service
