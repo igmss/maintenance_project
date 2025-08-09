@@ -105,7 +105,7 @@ def register():
                 if validate_coordinates(latitude, longitude):
                     # Create initial location entry
                     initial_location = ProviderLocation(
-                        provider_id=profile.id,
+                        provider_id=user.id,  # Use user.id since ProviderLocation references users.id
                         latitude=latitude,
                         longitude=longitude,
                         is_online=True,

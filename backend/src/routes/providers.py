@@ -30,7 +30,7 @@ def get_provider_profile(current_user):
         
         # Get current location
         current_location = ProviderLocation.query.filter_by(
-            provider_id=provider.id
+            provider_id=current_user.id  # Use current_user.id for ProviderLocation
         ).order_by(ProviderLocation.last_updated.desc()).first()
         
         # Get documents
@@ -287,7 +287,7 @@ def update_live_location(current_user):
         
         # Update the most recent online location or create new one
         recent_location = ProviderLocation.query.filter_by(
-            provider_id=provider.id,
+            provider_id=current_user.id,  # Use current_user.id instead of provider.id
             is_online=True
         ).order_by(ProviderLocation.last_updated.desc()).first()
         
@@ -303,7 +303,7 @@ def update_live_location(current_user):
         else:
             # Create new location if none exists
             location = ProviderLocation(
-                provider_id=provider.id,
+                provider_id=current_user.id,  # Use current_user.id instead of provider.id
                 latitude=float(latitude),
                 longitude=float(longitude),
                 is_online=True,
