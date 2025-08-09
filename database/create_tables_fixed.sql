@@ -169,7 +169,7 @@ CREATE TABLE IF NOT EXISTS provider_services (
 -- Provider locations (real-time tracking)
 CREATE TABLE IF NOT EXISTS provider_locations (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    provider_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    provider_id UUID NOT NULL REFERENCES service_provider_profiles(id) ON DELETE CASCADE,
     latitude DECIMAL(10,8) NOT NULL,
     longitude DECIMAL(11,8) NOT NULL,
     accuracy DECIMAL(6,2),
@@ -183,7 +183,7 @@ CREATE TABLE IF NOT EXISTS provider_locations (
 -- Provider service areas
 CREATE TABLE IF NOT EXISTS provider_service_areas (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    provider_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    provider_id UUID NOT NULL REFERENCES service_provider_profiles(id) ON DELETE CASCADE,
     governorate_id UUID NOT NULL REFERENCES governorates(id) ON DELETE CASCADE,
     city_id UUID REFERENCES cities(id) ON DELETE CASCADE,
     travel_cost DECIMAL(8,2) DEFAULT 0.00,
@@ -196,7 +196,7 @@ CREATE TABLE IF NOT EXISTS provider_service_areas (
 -- Provider documents (for verification)
 CREATE TABLE IF NOT EXISTS provider_documents (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    provider_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    provider_id UUID NOT NULL REFERENCES service_provider_profiles(id) ON DELETE CASCADE,
     document_type VARCHAR(50) NOT NULL CHECK (document_type IN ('national_id', 'business_license', 'tax_certificate', 'insurance', 'certification', 'other')),
     document_url TEXT NOT NULL,
     document_number VARCHAR(100),

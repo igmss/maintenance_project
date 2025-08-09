@@ -60,3 +60,74 @@ SELECT column_name, data_type, is_nullable, column_default
 FROM information_schema.columns 
 WHERE table_name = 'provider_locations' 
 ORDER BY ordinal_position;
+
+-- Fix foreign keys to reference service_provider_profiles instead of users
+-- Safe to run multiple times
+
+DO $$
+BEGIN
+    -- provider_locations.provider_id fk
+    IF EXISTS (
+        SELECT 1 FROM information_schema.table_constraints c
+        WHERE c.constraint_type = 'FOREIGN KEY'
+          AND c.table_name = 'provider_locations'
+          AND c.constraint_name = 'provider_locations_provider_id_fkey'
+    ) THEN
+        ALTER TABLE provider_locations
+        DROP CONSTRAINT provider_locations_provider_id_fkey;
+    END IF;
+
+    ALTER TABLE provider_locations
+    ADD CONSTRAINT provider_locations_provider_id_fkey
+    FOREIGN KEY (provider_id) REFERENCES service_provider_profiles(id) ON DELETE CASCADE;
+
+    -- provider_service_areas.provider_id fk
+    IF EXISTS (
+        SELECT 1 FROM information_schema.table_constraints c
+        WHERE c.constraint_type = 'FOREIGN KEY'
+          AND c.table_name = 'provider_service_areas'
+          AND c.constraint_name = 'provider_service_areas_provider_id_fkey'
+    ) THEN
+        ALTER TABLE provider_service_areas
+        DROP CONSTRAINT provider_service_areas_provider_id_fkey;
+    END IF;
+
+    ALTER TABLE provider_service_areas
+    ADD CONSTRAINT provider_service_areas_provider_id_fkey
+    FOREIGN KEY (provider_id) REFERENCES service_provider_profiles(id) ON DELETE CASCADE;
+
+    -- provider_documents.provider_id fk
+    IF EXISTS (
+        SELECT 1 FROM information_schema.table_constraints c
+        WHERE c.constraint_type = 'FOREIGN KEY'
+          AND c.table_name = 'provider_documents'
+          AND c.constraint_name = 'provider_documents_provider_id_fkey'
+    ) THEN
+        ALTER TABLE provider_documents
+        DROP CONSTRAINT provider_documents_provider_id_fkey;
+    END IF;
+
+    ALTER TABLE provider_documents
+    ADD CONSTRAINT provider_documents_provider_id_fkey
+    FOREIGN KEY (provider_id) REFERENCES service_provider_profiles(id) ON DELETE CASCADE;
+
+    -- booking_reviews.provider_id fk (if present in this schema)
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'booking_reviews' AND column_name = 'provider_id'
+    ) THEN
+        IF EXISTS (
+            SELECT 1 FROM information_schema.table_constraints c
+            WHERE c.constraint_type = 'FOREIGN KEY'
+              AND c.table_name = 'booking_reviews'
+              AND c.constraint_name = 'booking_reviews_provider_id_fkey'
+        ) THEN
+            ALTER TABLE booking_reviews
+            DROP CONSTRAINT booking_reviews_provider_id_fkey;
+        END IF;
+
+        ALTER TABLE booking_reviews
+        ADD CONSTRAINT booking_reviews_provider_id_fkey
+        FOREIGN KEY (provider_id) REFERENCES service_provider_profiles(id) ON DELETE CASCADE;
+    END IF;
+END $$;

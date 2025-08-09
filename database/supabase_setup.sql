@@ -180,7 +180,7 @@ CREATE TABLE booking_status_history (
 -- Provider locations (for tracking)
 CREATE TABLE provider_locations (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    provider_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    provider_id UUID REFERENCES service_provider_profiles(id) ON DELETE CASCADE,
     latitude DECIMAL(10, 8) NOT NULL,
     longitude DECIMAL(11, 8) NOT NULL,
     accuracy DECIMAL(8, 2),
@@ -195,7 +195,7 @@ CREATE TABLE booking_reviews (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     booking_id UUID REFERENCES bookings(id) ON DELETE CASCADE,
     customer_id UUID REFERENCES users(id) ON DELETE CASCADE,
-    provider_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    provider_id UUID REFERENCES service_provider_profiles(id) ON DELETE CASCADE,
     rating INTEGER CHECK (rating >= 1 AND rating <= 5),
     review_text TEXT,
     service_quality_rating INTEGER CHECK (service_quality_rating >= 1 AND service_quality_rating <= 5),
